@@ -1,418 +1,363 @@
-"""Session detail page UI component."""
+"""Session detail page UI component styled to match the dashboard."""
+
 import streamlit as st
-from src.services.session_service import get_session_by_id, register_for_session
+
 from src.models.session import Session
+from src.services.session_service import get_session_by_id, register_for_session
 from src.ui.html_utils import html_block
 
+LEVEL_STYLES = {
+    "初": {
+        "label": "初級",
+        "badge": "linear-gradient(135deg, #60a5fa 0%, #a855f7 100%)",
+        "shadow": "0 24px 45px rgba(96, 165, 250, 0.28)",
+    },
+    "中": {
+        "label": "中級",
+        "badge": "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)",
+        "shadow": "0 24px 45px rgba(168, 85, 247, 0.28)",
+    },
+    "高": {
+        "label": "高級",
+        "badge": "linear-gradient(135deg, #f97316 0%, #ef4444 100%)",
+        "shadow": "0 24px 45px rgba(239, 68, 68, 0.28)",
+    },
+}
 
-def _render_speaker_info(session: Session):
-    """
-    渲染講師資訊區塊。
-
-    Args:
-        session: 議程物件
-    """
-    st.markdown(html_block("""
-        <h3 style="
-            color: #cbd5e1;
-            font-size: 20px;
-            font-weight: 600;
-            margin-top: 32px;
-            margin-bottom: 16px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #334155;
-        ">
-            👤 講師資訊
-        </h3>
-    """), unsafe_allow_html=True)
-
-    # 講師資訊佈局
-    col1, col2 = st.columns([1, 3])
-
-    with col1:
-        # 講師照片
-        try:
-            st.image(session.speaker.photo, use_column_width=True)
-        except:
-            # 如果照片無法載入，顯示佔位符
-            st.markdown(html_block("""
-                <div style="
-                    width: 100%;
-                    aspect-ratio: 1;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    border-radius: 12px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 48px;
-                ">
-                    👤
-                </div>
-            """), unsafe_allow_html=True)
-
-    with col2:
-        # 講師姓名
-        st.markdown(html_block(f"""
-            <div style="
-                color: #f1f5f9;
-                font-size: 24px;
-                font-weight: 600;
-                margin-bottom: 8px;
-            ">
-                {session.speaker.name}
-            </div>
-        """), unsafe_allow_html=True)
-
-        # 講師簡介
-        st.markdown(html_block(f"""
-            <div style="
-                color: #cbd5e1;
-                font-size: 14px;
-                line-height: 1.6;
-            ">
-                {session.speaker.bio}
-            </div>
-        """), unsafe_allow_html=True)
+STATUS_CONFIG = {
+    "available": {"label": "可報名", "color": "#22d3ee"},
+    "full": {"label": "已額滿", "color": "#f87171"},
+    "expired": {"label": "已過期", "color": "#94a3b8"},
+}
 
 
-def _render_session_info(session: Session):
-    """
-    渲染議程基本資訊。
-
-    Args:
-        session: 議程物件
-    """
-    # 難度徽章樣式
-    badge_styles = {
-        "初": {"color": "#06b6d4", "bg": "#cffafe", "label": "初級"},
-        "中": {"color": "#a855f7", "bg": "#f3e8ff", "label": "中級"},
-        "高": {"color": "#ef4444", "bg": "#fee2e2", "label": "高級"}
-    }
-    badge = badge_styles.get(session.level, badge_styles["初"])
-
-    # 標題與難度徽章
-    st.markdown(html_block(f"""
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-            <h1 style="
-                color: #f1f5f9;
-                font-size: 36px;
-                font-weight: 700;
-                margin: 0;
-                flex: 1;
-            ">
-                {session.title}
-            </h1>
-            <div style="
-                background: {badge['bg']};
-                color: {badge['color']};
-                padding: 8px 16px;
-                border-radius: 16px;
-                font-size: 14px;
-                font-weight: 600;
-                margin-left: 16px;
-            ">
-                {badge['label']}
-            </div>
-        </div>
-    """), unsafe_allow_html=True)
-
-    # 描述
-    st.markdown(html_block(f"""
-        <div style="
-            color: #cbd5e1;
-            font-size: 16px;
-            line-height: 1.8;
-            margin-bottom: 24px;
-        ">
-            {session.description}
-        </div>
-    """), unsafe_allow_html=True)
-
-    # 議程資訊卡片
-    info_items = [
-        ("📅 日期", session.date),
-        ("⏰ 時間", session.time),
-        ("📍 地點", session.location),
-    ]
-
-    cols = st.columns(3)
-    for col, (label, value) in zip(cols, info_items):
-        with col:
-            st.markdown(html_block(f"""
-                <div style="
-                    background: #16213e;
-                    padding: 16px;
-                    border-radius: 12px;
-                    border: 1px solid #2d3748;
-                ">
-                    <div style="
-                        color: #94a3b8;
-                        font-size: 12px;
-                        margin-bottom: 4px;
-                    ">
-                        {label}
-                    </div>
-                    <div style="
-                        color: #f1f5f9;
-                        font-size: 16px;
-                        font-weight: 600;
-                    ">
-                        {value}
-                    </div>
-                </div>
-            """), unsafe_allow_html=True)
-
-
-def _render_tags(session: Session):
-    """
-    渲染技術標籤。
-
-    Args:
-        session: 議程物件
-    """
-    st.markdown(html_block("""
-        <h3 style="
-            color: #cbd5e1;
-            font-size: 20px;
-            font-weight: 600;
-            margin-top: 32px;
-            margin-bottom: 16px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #334155;
-        ">
-            🏷️ 技術標籤
-        </h3>
-    """), unsafe_allow_html=True)
-
-    tags_html = " ".join([
-        f"""<span style="
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 500;
-            display: inline-block;
-            margin-right: 8px;
-            margin-bottom: 8px;
-        ">#{tag}</span>"""
-        for tag in session.tags
-    ])
-
-    st.markdown(f'<div>{tags_html}</div>', unsafe_allow_html=True)
-
-
-def _render_learning_outcomes(session: Session):
-    """
-    渲染學習成果。
-
-    Args:
-        session: 議程物件
-    """
-    st.markdown(html_block("""
-        <h3 style="
-            color: #cbd5e1;
-            font-size: 20px;
-            font-weight: 600;
-            margin-top: 32px;
-            margin-bottom: 16px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #334155;
-        ">
-            🎯 學習成果
-        </h3>
-    """), unsafe_allow_html=True)
-
-    st.markdown(html_block(f"""
-        <div style="
-            background: #16213e;
-            padding: 20px;
-            border-radius: 12px;
-            border-left: 4px solid #a855f7;
-            color: #cbd5e1;
-            font-size: 15px;
-            line-height: 1.8;
-        ">
-            {session.learning_outcomes}
-        </div>
-    """), unsafe_allow_html=True)
-
-
-def _render_registration_status(session: Session):
-    """
-    渲染報名狀態與按鈕。
-
-    Args:
-        session: 議程物件
-    """
-    st.markdown(html_block("""
-        <h3 style="
-            color: #cbd5e1;
-            font-size: 20px;
-            font-weight: 600;
-            margin-top: 32px;
-            margin-bottom: 16px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #334155;
-        ">
-            📊 報名狀態
-        </h3>
-    """), unsafe_allow_html=True)
-
-    # 計算報名資訊
-    registration_pct = session.registration_percentage()
-    status = session.status()
-
-    # 狀態樣式
-    status_config = {
-        "available": {
-            "icon": "🟢",
-            "text": "開放報名",
-            "color": "#10b981",
-            "button_color": "#059669"
-        },
-        "full": {
-            "icon": "🔴",
-            "text": "已額滿",
-            "color": "#ef4444",
-            "button_color": "#9ca3af"
-        },
-        "expired": {
-            "icon": "⏰",
-            "text": "已過期",
-            "color": "#6b7280",
-            "button_color": "#9ca3af"
-        }
-    }
-
-    config = status_config.get(status, status_config["available"])
-
-    # 報名進度卡片
-    st.markdown(html_block(f"""
-        <div style="
-            background: #16213e;
-            padding: 24px;
-            border-radius: 12px;
-            border: 1px solid #2d3748;
-        ">
-            <div style="
+def _inject_detail_styles():
+    """Inject detail page specific styles."""
+    st.markdown(
+        html_block(
+            """
+            <style>
+            .detail-wrapper {
+                max-width: 960px;
+                margin: 0 auto;
+            }
+            .detail-card {
+                background: rgba(15, 17, 40, 0.96);
+                border-radius: 24px;
+                padding: 28px 32px;
+                border: 1px solid rgba(148, 163, 184, 0.18);
+                box-shadow: 0 24px 55px rgba(15, 17, 40, 0.55);
+                display: flex;
+                flex-direction: column;
+                gap: 22px;
+            }
+            .detail-header {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                margin-bottom: 16px;
-            ">
-                <div style="
-                    color: {config['color']};
-                    font-size: 18px;
-                    font-weight: 600;
-                ">
-                    {config['icon']} {config['text']}
-                </div>
-                <div style="
-                    color: #f1f5f9;
-                    font-size: 24px;
-                    font-weight: 700;
-                ">
-                    {session.registered} / {session.capacity}
-                </div>
-            </div>
-
-            <!-- 進度條 -->
-            <div style="
+                gap: 16px;
+            }
+            .detail-title {
+                color: #f8fafc;
+                font-size: 28px;
+                font-weight: 700;
+                margin: 0;
+                flex: 1;
+            }
+            .detail-level {
+                padding: 8px 18px;
+                border-radius: 999px;
+                font-weight: 600;
+                letter-spacing: 0.06em;
+                color: #18122b;
+            }
+            .detail-meta {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 12px;
+                color: #cbd5f5;
+                font-size: 13px;
+                letter-spacing: 0.04em;
+            }
+            .detail-meta span::before {
+                content: "•";
+                margin-right: 6px;
+                color: rgba(148, 163, 184, 0.4);
+            }
+            .detail-meta span:first-child::before {
+                content: "";
+                margin: 0;
+            }
+            .detail-grid {
+                display: grid;
+                grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+                gap: 22px;
+                align-items: start;
+            }
+            .detail-section {
+                background: rgba(39, 44, 74, 0.65);
+                border-radius: 18px;
+                padding: 18px 20px;
+                border: 1px solid rgba(148, 163, 184, 0.18);
+            }
+            .detail-section h4 {
+                margin: 0 0 12px;
+                color: #e2e8f0;
+                font-size: 15px;
+                letter-spacing: 0.05em;
+                font-weight: 600;
+            }
+            .detail-description {
+                color: #cbd5e1;
+                font-size: 15px;
+                line-height: 1.55;
+            }
+            .detail-tags {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin-top: 12px;
+            }
+            .detail-tag {
+                padding: 6px 16px;
+                border-radius: 999px;
+                background: rgba(148, 163, 184, 0.12);
+                color: #e2e8f0;
+                font-size: 12px;
+                border: 1px solid rgba(148, 163, 184, 0.2);
+            }
+            .detail-speaker-name {
+                color: #f8fafc;
+                font-size: 16px;
+                font-weight: 600;
+                margin-bottom: 6px;
+            }
+            .detail-speaker-bio {
+                color: #cbd5e1;
+                font-size: 13px;
+                line-height: 1.5;
+            }
+            .detail-progress-track {
                 width: 100%;
-                height: 12px;
-                background: #334155;
-                border-radius: 6px;
+                height: 10px;
+                border-radius: 999px;
+                background: rgba(99, 102, 241, 0.2);
                 overflow: hidden;
-                margin-bottom: 8px;
-            ">
-                <div style="
-                    width: {registration_pct}%;
-                    height: 100%;
-                    background: linear-gradient(90deg, #06b6d4, #8b5cf6);
-                    transition: width 0.3s;
-                "></div>
-            </div>
-
-            <div style="
-                color: #94a3b8;
-                font-size: 14px;
+                margin-top: 12px;
+            }
+            .detail-progress-fill {
+                height: 100%;
+                border-radius: inherit;
+                transition: width 0.3s ease;
+            }
+            .detail-progress-text {
                 text-align: right;
-            ">
-                {registration_pct:.1f}% 已報名
+                font-size: 12px;
+                color: rgba(226, 232, 240, 0.85);
+                margin-top: 8px;
+                letter-spacing: 0.05em;
+            }
+            .detail-register {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+                margin-top: 16px;
+            }
+            .detail-register button {
+                width: 100%;
+                border-radius: 999px !important;
+                font-weight: 600 !important;
+                letter-spacing: 0.08em !important;
+                background: linear-gradient(135deg, #ec4899 0%, #a855f7 100%) !important;
+                color: #18122b !important;
+                border: none !important;
+                padding: 12px 0 !important;
+            }
+            .detail-register button:disabled {
+                background: rgba(148, 163, 184, 0.3) !important;
+                color: rgba(15, 17, 40, 0.55) !important;
+            }
+            .detail-back {
+                margin-bottom: 12px;
+            }
+            .detail-back button {
+                border-radius: 999px !important;
+                background: rgba(236, 72, 153, 0.12) !important;
+                color: #f5d0ff !important;
+                border: 1px solid rgba(236, 72, 153, 0.35) !important;
+                padding: 6px 18px !important;
+                font-weight: 600 !important;
+            }
+            .detail-back button:hover {
+                background: linear-gradient(135deg, #ec4899 0%, #a855f7 100%) !important;
+                color: #18122b !important;
+            }
+            </style>
+            """
+        ),
+        unsafe_allow_html=True,
+    )
+
+
+def _detail_header_html(session: Session) -> str:
+    """Return header HTML for the detail card."""
+    level_style = LEVEL_STYLES.get(session.level, LEVEL_STYLES["初"])
+    meta_items = [
+        session.date,
+        session.time,
+        session.location,
+    ]
+
+    meta_html = "".join([f"<span>{item}</span>" for item in meta_items])
+
+    return html_block(
+        f"""
+        <div class="detail-header">
+            <h2 class="detail-title">{session.title}</h2>
+            <div class="detail-level" style="background: {level_style['badge']}; box-shadow: {level_style['shadow']};">
+                {level_style['label']}
             </div>
         </div>
-    """), unsafe_allow_html=True)
+        <div class="detail-meta">
+            {meta_html}
+        </div>
+        """
+    )
 
-    # 報名按鈕
-    st.markdown("<div style='margin-top: 24px;'></div>", unsafe_allow_html=True)
 
-    if status == "available":
-        if st.button(
-            "🎫 立即報名",
-            key="register_button",
-            use_container_width=True,
-            type="primary"
-        ):
-            # 執行報名
-            success, message = register_for_session(session.id)
+def _detail_description_html(session: Session) -> str:
+    """Return description block HTML."""
+    visible_tags = session.tags[:3]
+    tags_html = "".join([f'<span class="detail-tag">#{tag}</span>' for tag in visible_tags])
 
-            if success:
-                st.success(message)
-                st.balloons()
-                # 重新載入頁面以更新資料
-                st.rerun()
-            else:
-                st.error(message)
+    return html_block(
+        f"""
+        <div class="detail-section">
+            <h4>議程簡介</h4>
+            <div class="detail-description">{session.description}</div>
+            <div class="detail-tags">{tags_html}</div>
+        </div>
+        """
+    )
 
-    elif status == "full":
-        st.button(
-            "🔴 已額滿",
-            key="full_button",
-            use_container_width=True,
-            disabled=True
-        )
 
-    else:  # expired
-        st.button(
-            "⏰ 已過期",
-            key="expired_button",
-            use_container_width=True,
-            disabled=True
-        )
+def _detail_learning_html(session: Session) -> str:
+    """Return learning outcomes block HTML."""
+    outcomes = session.learning_outcomes
+
+    return html_block(
+        f"""
+        <div class="detail-section">
+            <h4>學習重點</h4>
+            <div class="detail-description">{outcomes}</div>
+        </div>
+        """
+    )
+
+
+def _detail_speaker_html(session: Session) -> str:
+    """Return speaker block HTML."""
+    return html_block(
+        f"""
+        <div class="detail-section">
+            <h4>講者資訊</h4>
+            <div class="detail-speaker-name">{session.speaker.name}</div>
+            <div class="detail-speaker-bio">{session.speaker.bio}</div>
+        </div>
+        """
+    )
+
+
+def _detail_registration_html(session: Session) -> str:
+    """Return registration status HTML."""
+    registration_pct = session.registration_percentage()
+    status = session.status()
+    config = STATUS_CONFIG.get(status, STATUS_CONFIG["available"])
+
+    return html_block(
+        f"""
+        <div class="detail-section">
+            <h4>報名狀態</h4>
+            <div style="color: {config['color']}; font-weight: 600; font-size: 15px;">
+                {config['label']} · {session.registered}/{session.capacity} 人
+            </div>
+            <div class="detail-progress-track">
+                <div class="detail-progress-fill" style="width: {registration_pct}%; background: linear-gradient(135deg, #ec4899 0%, #a855f7 100%);"></div>
+            </div>
+            <div class="detail-progress-text">{registration_pct:.1f}% 已報名</div>
+        </div>
+        """
+    )
 
 
 def render_session_detail(session_id: str):
     """
-    渲染議程詳情頁面。
+    Render the session detail page.
 
     Args:
-        session_id: 議程 ID
+        session_id: Session identifier
     """
-    # 取得議程資料
     session = get_session_by_id(session_id)
 
     if session is None:
         st.error(f"找不到議程：{session_id}")
-
         if st.button("⬅️ 返回議程列表"):
             st.session_state.current_page = "dashboard"
             st.session_state.selected_session_id = None
             st.rerun()
-
         return
 
-    # 返回按鈕
-    if st.button("⬅️ 返回議程列表", key="back_button"):
+    _inject_detail_styles()
+
+    back_container = st.container()
+    back_container.markdown("<div class='detail-back'>", unsafe_allow_html=True)
+    if back_container.button(
+        "⬅️ 返回議程列表",
+        key="detail_back",
+        help="返回列表",
+        use_container_width=False,
+    ):
         st.session_state.current_page = "dashboard"
         st.session_state.selected_session_id = None
         st.rerun()
+    back_container.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("<div style='margin-bottom: 32px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div class='detail-wrapper'>", unsafe_allow_html=True)
+    st.markdown("<div class='detail-card'>", unsafe_allow_html=True)
+    st.markdown(_detail_header_html(session), unsafe_allow_html=True)
 
-    # 渲染各個區塊
-    _render_session_info(session)
-    _render_speaker_info(session)
-    _render_tags(session)
-    _render_learning_outcomes(session)
-    _render_registration_status(session)
+    main_col, side_col = st.columns([1.6, 1], gap="large")
+
+    with main_col:
+        st.markdown(_detail_description_html(session), unsafe_allow_html=True)
+        st.markdown(_detail_learning_html(session), unsafe_allow_html=True)
+
+    with side_col:
+        st.markdown(_detail_speaker_html(session), unsafe_allow_html=True)
+        st.markdown(_detail_registration_html(session), unsafe_allow_html=True)
+
+        status = session.status()
+        disabled = status != "available"
+        button_label = {
+            "available": "🎫 立即報名",
+            "full": "🔴 已額滿",
+            "expired": "⏰ 已過期",
+        }.get(status, "🎫 立即報名")
+
+        st.markdown("<div class='detail-register'>", unsafe_allow_html=True)
+        if st.button(
+            button_label,
+            key=f"detail_register_{session.id}",
+            use_container_width=True,
+            disabled=disabled,
+        ):
+            success, message = register_for_session(session.id)
+            if success:
+                st.success(message)
+                st.balloons()
+                st.rerun()
+            else:
+                st.error(message)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("</div></div>", unsafe_allow_html=True)
