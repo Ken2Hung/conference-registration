@@ -1,0 +1,255 @@
+{
+  "sessions": [
+    {
+      "id": "session_001",
+      "title": "AI Guardrails:以 Python 構建企業級 LLM 安全防護策略",
+      "description": "在企業導入大型語言模型時,若缺乏適當的防護機制,可能面臨數據洩露、內容合規等風險。本課程將介紹如何使用 Guardrails.ai 框架,建立完善的 LLM 輸入/輸出驗證機制,確保 AI 系統安全可控。",
+      "date": "2025-11-15",
+      "time": "14:00-16:00",
+      "location": "線上 Zoom 會議室",
+      "level": "中",
+      "tags": [
+        "Python",
+        "LLM",
+        "AI Safety",
+        "Guardrails.ai"
+      ],
+      "learning_outcomes": "學會如何建構 LLM 安全防護、了解常見 AI 應用風險、掌握 Guardrails.ai 實作技巧",
+      "capacity": 100,
+      "registered": 67,
+      "speaker": {
+        "name": "Nero Un 阮智軒",
+        "photo": "images/speakers/nero-un.jpg",
+        "bio": "來自澳門的開發者,現職 IBM 顧問。專注於 AI 安全與企業級應用開發,曾協助多家企業導入 LLM 解決方案。"
+      }
+    },
+    {
+      "id": "session_002",
+      "title": "Python 網頁爬蟲入門:從 Requests 到 Selenium",
+      "description": "網頁爬蟲是數據收集的重要技能。本課程從基礎的 Requests 庫開始,逐步進階到 Selenium 自動化,教你如何爬取靜態與動態網頁,並處理反爬蟲機制。",
+      "date": "2025-09-15",
+      "time": "10:00-12:00",
+      "location": "台北國際會議中心 201 室",
+      "level": "初",
+      "tags": [
+        "Python",
+        "Web Scraping",
+        "Selenium",
+        "Requests"
+      ],
+      "learning_outcomes": "掌握 Requests 與 BeautifulSoup 用法、學會使用 Selenium 處理動態網頁、了解反爬蟲應對策略",
+      "capacity": 70,
+      "registered": 65,
+      "speaker": {
+        "name": "張志成",
+        "photo": "images/speakers/zhang-zhicheng.jpg",
+        "bio": "資深全端工程師,擅長 Python 與 React 開發,專注於 Web 爬蟲與自動化測試領域。曾在多家科技公司擔任技術主管,擁有 10 年以上開發經驗。"
+      }
+    },
+    {
+      "id": "session_003",
+      "title": "React 前端開發最佳實踐",
+      "description": "深入 React 生態系,學習 Hooks、狀態管理、性能優化等進階主題。課程包含 Redux Toolkit、React Query、Testing Library 等現代工具鏈。",
+      "date": "2025-10-20",
+      "time": "14:00-17:00",
+      "location": "線上 Google Meet",
+      "level": "中",
+      "tags": [
+        "React",
+        "JavaScript",
+        "Frontend",
+        "Hooks",
+        "Redux"
+      ],
+      "learning_outcomes": "精通 React Hooks 設計模式、掌握 Redux Toolkit 狀態管理、學會性能優化技巧",
+      "capacity": 80,
+      "registered": 72,
+      "speaker": {
+        "name": "李欣怡",
+        "photo": "images/speakers/li-xinyi.jpg",
+        "bio": "前端技術專家,React 核心貢獻者。曾在 Facebook 和 Airbnb 工作,專注於大規模前端應用架構設計。熱衷於分享前端最佳實踐。"
+      }
+    },
+    {
+      "id": "session_004",
+      "title": "Kubernetes 容器編排實戰",
+      "description": "從零開始學習 Kubernetes,掌握容器化應用的部署、擴展和管理。課程涵蓋 Pod、Service、Deployment、ConfigMap 等核心概念。",
+      "date": "2025-12-01",
+      "time": "13:00-17:00",
+      "location": "台北 101 會議中心",
+      "level": "高",
+      "tags": [
+        "Kubernetes",
+        "Docker",
+        "DevOps",
+        "Cloud"
+      ],
+      "learning_outcomes": "理解 K8s 架構、掌握資源配置、學會故障排查、實現自動擴展",
+      "capacity": 50,
+      "registered": 12,
+      "speaker": {
+        "name": "王大明",
+        "photo": "images/speakers/wang-daming.jpg",
+        "bio": "雲端架構師,擁有 CKA 和 CKAD 認證。曾協助多家企業完成雲原生轉型,專注於 Kubernetes 生產環境最佳實踐。"
+      }
+    },
+    {
+      "id": "session_005",
+      "title": "TensorFlow 深度學習入門",
+      "description": "帶你進入深度學習的世界,使用 TensorFlow 2.0 建立你的第一個神經網絡。課程包含卷積網絡、循環網絡等經典架構。",
+      "date": "2025-10-10",
+      "time": "09:00-12:00",
+      "location": "線上 Zoom",
+      "level": "初",
+      "tags": [
+        "TensorFlow",
+        "Deep Learning",
+        "Python",
+        "AI"
+      ],
+      "learning_outcomes": "掌握 TensorFlow 基礎、了解神經網絡原理、實作圖像分類模型",
+      "capacity": 100,
+      "registered": 100,
+      "speaker": {
+        "name": "陳小華",
+        "photo": "images/speakers/chen-xiaohua.jpg",
+        "bio": "AI 研究員,專注於計算機視覺領域。擁有多篇頂級會議論文發表,熱衷於推廣深度學習技術。"
+      }
+    },
+    {
+      "id": "session_006",
+      "title": "AWS 雲端服務架構設計",
+      "description": "學習如何在 AWS 上設計高可用、高擴展的雲端應用。涵蓋 EC2、S3、RDS、Lambda 等核心服務。",
+      "date": "2025-11-25",
+      "time": "14:00-18:00",
+      "location": "線上 Microsoft Teams",
+      "level": "中",
+      "tags": [
+        "AWS",
+        "Cloud",
+        "Architecture",
+        "DevOps"
+      ],
+      "learning_outcomes": "理解 AWS 服務體系、掌握架構設計原則、學會成本優化策略",
+      "capacity": 60,
+      "registered": 45,
+      "speaker": {
+        "name": "林雅婷",
+        "photo": "images/speakers/lin-yating.jpg",
+        "bio": "AWS 認證解決方案架構師,擁有豐富的雲端遷移經驗。曾協助多家企業完成上雲轉型。"
+      }
+    },
+    {
+      "id": "session_007",
+      "title": "Agile 敏捷開發與 Scrum 實踐",
+      "description": "深入了解敏捷開發方法論,學習如何運用 Scrum 框架提升團隊效率。適合產品經理和技術團隊。",
+      "date": "2025-10-05",
+      "time": "10:00-13:00",
+      "location": "台北信義區會議室",
+      "level": "初",
+      "tags": [
+        "Agile",
+        "Scrum",
+        "Project Management"
+      ],
+      "learning_outcomes": "掌握敏捷原則、學會 Sprint 規劃、了解團隊協作方法",
+      "capacity": 40,
+      "registered": 38,
+      "speaker": {
+        "name": "黃建國",
+        "photo": "images/speakers/huang-jianguo.jpg",
+        "bio": "敏捷教練,CSM 認證 Scrum Master。在多家科技公司推動敏捷轉型,擁有豐富的實戰經驗。"
+      }
+    },
+    {
+      "id": "session_008",
+      "title": "Git 版本控制與 GitHub 協作流程",
+      "description": "從基礎到進階,全面掌握 Git 版本控制。學習分支管理、衝突解決、GitHub Flow 等協作最佳實踐。",
+      "date": "2025-09-20",
+      "time": "14:00-16:00",
+      "location": "線上 Zoom",
+      "level": "初",
+      "tags": [
+        "Git",
+        "GitHub",
+        "Version Control"
+      ],
+      "learning_outcomes": "熟練使用 Git 命令、掌握分支策略、學會 Pull Request 流程",
+      "capacity": 80,
+      "registered": 76,
+      "speaker": {
+        "name": "周志明",
+        "photo": "images/speakers/zhou-zhiming.jpg",
+        "bio": "開源社群活躍貢獻者,GitHub Star 超過 10k。長期推廣版本控制最佳實踐,曾在多個技術社群分享。"
+      }
+    },
+    {
+      "id": "session_009",
+      "title": "Python 數據分析實戰:Pandas 與 NumPy",
+      "description": "學習使用 Pandas 和 NumPy 進行數據清洗、轉換和分析。課程包���真實案例和實作練習。",
+      "date": "2025-11-10",
+      "time": "09:00-13:00",
+      "location": "台北科技大學",
+      "level": "中",
+      "tags": [
+        "Python",
+        "Pandas",
+        "NumPy",
+        "Data Analysis"
+      ],
+      "learning_outcomes": "掌握數據處理技巧、學會數據可視化、了解統計分析方法",
+      "capacity": 90,
+      "registered": 90,
+      "speaker": {
+        "name": "劉芳儀",
+        "photo": "images/speakers/liu-fangyi.jpg",
+        "bio": "數據科學家,專注於商業分析領域。曾在金融和電商行業處理大規模數據,熱愛教學與分享。"
+      }
+    },
+    {
+      "id": "session_010",
+      "title": "Docker 容器化技術入門",
+      "description": "從零開始學習 Docker,理解容器化概念,學會編寫 Dockerfile 和使用 Docker Compose 管理多容器應用。",
+      "date": "2025-12-08",
+      "time": "14:00-17:00",
+      "location": "線上 Google Meet",
+      "level": "初",
+      "tags": [
+        "Docker",
+        "DevOps",
+        "Containers"
+      ],
+      "learning_outcomes": "理解容器化原理、掌握 Docker 命令、學會編寫 Dockerfile",
+      "capacity": 70,
+      "registered": 35,
+      "speaker": {
+        "name": "吳承恩",
+        "photo": "images/speakers/wu-chengen.jpg",
+        "bio": "DevOps 工程師,Docker 認證專家。在多個項目中實踐容器化部署,擅長 CI/CD 流程優化。"
+      }
+    },
+    {
+      "id": "session_011",
+      "title": "Apache Airflow 數據流程編排",
+      "description": "學習使用 Airflow 管理複雜的數據管道。課程涵蓋 DAG 設計、任務調度、錯誤處理等核心概念。",
+      "date": "2025-12-15",
+      "time": "10:00-14:00",
+      "location": "線上 Zoom",
+      "level": "高",
+      "tags": [
+        "Airflow",
+        "Data Engineering",
+        "Python",
+        "ETL"
+      ],
+      "learning_outcomes": "掌握 Airflow 架構、學會編寫 DAG、了解最佳實踐",
+      "capacity": 40,
+      "registered": 18,
+      "speaker": {
+        "name": "鄭明哲",
+        "photo": "images/speakers/zheng-mingzhe.jpg",
+        "bio": "數據工程師,在大數據平台建設方面有豐富經驗。曾負責多個企業級數據管道的設計和實現。"
+      }
+    }
+  ]
+}
