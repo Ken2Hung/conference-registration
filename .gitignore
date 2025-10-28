@@ -54,3 +54,8 @@ data/*.backup
 
 # Logs
 *.log
+
+# Environment variables
+.env
+.env.*
+!.env.example

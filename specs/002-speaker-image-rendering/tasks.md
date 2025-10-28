@@ -3,7 +3,8 @@
 **Feature**: 002-speaker-image-rendering
 **Branch**: 002-speaker-image-rendering
 **Created**: 2025-10-28
-**Status**: Ready for Implementation
+**Status**: ✅ COMPLETED
+**Completed**: 2025-10-28
 
 ---
 
@@ -38,12 +39,12 @@ This document contains the complete task breakdown for implementing circular spe
 
 ### Tasks
 
-- [ ] T001 Verify current branch is `002-speaker-image-rendering`
+- [X] T001 Verify current branch is `002-speaker-image-rendering`
   - Command: `git branch --show-current`
   - Expected: `002-speaker-image-rendering`
   - If not: `git checkout -b 002-speaker-image-rendering`
 
-- [ ] T002 Verify all design documents exist in `specs/002-speaker-image-rendering/`
+- [X] T002 Verify all design documents exist in `specs/002-speaker-image-rendering/`
   - Required files: spec.md, plan.md, research.md, quickstart.md, data-model.md
   - Command: `ls -la specs/002-speaker-image-rendering/`
 
@@ -78,13 +79,13 @@ streamlit run app.py
 
 #### Group A: Helper Function (Sequential)
 
-- [ ] T003 [US1] Create `_render_speaker_avatar()` helper function in `src/ui/dashboard.py`
+- [X] T003 [US1] Create `_render_speaker_avatar()` helper function in `src/ui/dashboard.py`
   - Location: After imports, before `_render_session_card()`
   - Function signature: `_render_speaker_avatar(photo_path: str, speaker_name: str, size: int = 50, is_past: bool = False) -> str`
   - Returns: HTML string with photo `<img>` tag
   - Reference: `specs/002-speaker-image-rendering/research.md` (Appendix section)
 
-- [ ] T004 [US1] Add CSS styling for circular photos in `_render_speaker_avatar()`
+- [X] T004 [US1] Add CSS styling for circular photos in `_render_speaker_avatar()`
   - border-radius: 50%
   - object-fit: cover
   - Border: 2px solid #2d3748
@@ -92,24 +93,24 @@ streamlit run app.py
   - Size: 50px × 50px
   - Reference: `specs/002-speaker-image-rendering/plan.md` (UI/UX Design section)
 
-- [ ] T005 [US1] Implement opacity control for past sessions in `_render_speaker_avatar()`
+- [X] T005 [US1] Implement opacity control for past sessions in `_render_speaker_avatar()`
   - If `is_past=True`: set `opacity: 0.6`
   - If `is_past=False`: set `opacity: 1.0`
   - Apply to both photo `<img>` and fallback placeholder
 
 #### Group B: Integration (Depends on Group A)
 
-- [ ] T006 [US1] Update `_render_session_card()` in `src/ui/dashboard.py` to call `_render_speaker_avatar()`
+- [X] T006 [US1] Update `_render_session_card()` in `src/ui/dashboard.py` to call `_render_speaker_avatar()`
   - Add call before rendering card HTML: `avatar_html = _render_speaker_avatar(session.speaker.photo, session.speaker.name, is_past=is_past)`
   - Pass result to card template
 
-- [ ] T007 [US1] Modify speaker display section in `_render_session_card()` HTML template
+- [X] T007 [US1] Modify speaker display section in `_render_session_card()` HTML template
   - Find: `<div style="color: #cbd5e1; ...">👤 {session.speaker.name}</div>`
   - Replace with: `<div style="...display: flex; align-items: center;">{avatar_html}<span>{session.speaker.name}</span></div>`
   - Remove emoji `👤`
   - Add `margin-right: 12px` spacing between photo and name
 
-- [ ] T008 [US1] Manual testing: Verify photos display correctly
+- [X] T008 [US1] Manual testing: Verify photos display correctly
   - Run: `streamlit run app.py`
   - Check: All 11 sessions show circular photos or placeholders
   - Check: Photos are 50px diameter, circular, with border and shadow
@@ -117,18 +118,18 @@ streamlit run app.py
 
 #### Group C: Unit Tests (Parallel with Group B)
 
-- [ ] T009 [P] [US1] Create test file `tests/ui/test_dashboard.py` if not exists
+- [X] T009 [P] [US1] Create test file `tests/ui/test_dashboard.py` if not exists
   - Add imports: `pytest`, `from src.ui.dashboard import _render_speaker_avatar`
 
-- [ ] T010 [P] [US1] Write test `test_render_avatar_contains_img_tag()` in `tests/ui/test_dashboard.py`
+- [X] T010 [P] [US1] Write test `test_render_avatar_contains_img_tag()` in `tests/ui/test_dashboard.py`
   - Test: Avatar HTML contains `<img>` tag with correct photo path
   - Assert: `'<img' in html` and `'images/speakers/test.jpg' in html`
 
-- [ ] T011 [P] [US1] Write test `test_render_avatar_circular_styling()` in `tests/ui/test_dashboard.py`
+- [X] T011 [P] [US1] Write test `test_render_avatar_circular_styling()` in `tests/ui/test_dashboard.py`
   - Test: Avatar HTML contains `border-radius: 50%`
   - Assert: Circular styling present
 
-- [ ] T012 [P] [US1] Write test `test_render_avatar_custom_size()` in `tests/ui/test_dashboard.py`
+- [X] T012 [P] [US1] Write test `test_render_avatar_custom_size()` in `tests/ui/test_dashboard.py`
   - Test: Avatar respects custom size parameter
   - Call: `_render_speaker_avatar("test.jpg", "John", size=100)`
   - Assert: `'width: 100px'` and `'height: 100px'` in html
@@ -156,7 +157,7 @@ mv images/speakers/nero-un.jpg.bak images/speakers/nero-un.jpg
 
 ### Implementation Tasks
 
-- [ ] T013 [US2] Add fallback placeholder div in `_render_speaker_avatar()` in `src/ui/dashboard.py`
+- [X] T013 [US2] Add fallback placeholder div in `_render_speaker_avatar()` in `src/ui/dashboard.py`
   - Create container div with `position: relative`
   - Add placeholder div (renders first): gradient circle with speaker initial
   - Background: `linear-gradient(135deg, #667eea 0%, #764ba2 100%)`
@@ -164,27 +165,27 @@ mv images/speakers/nero-un.jpg.bak images/speakers/nero-un.jpg
   - Font size: 25px (50% of avatar size)
   - Reference: `specs/002-speaker-image-rendering/research.md` (R2 section)
 
-- [ ] T014 [US2] Add photo `<img>` tag overlaying placeholder in `_render_speaker_avatar()`
+- [X] T014 [US2] Add photo `<img>` tag overlaying placeholder in `_render_speaker_avatar()`
   - Position: `absolute`, `z-index: 1` (above placeholder)
   - Add `onerror="this.style.display='none';"` attribute
   - Result: If photo fails to load, it hides and reveals placeholder
 
-- [ ] T015 [US2] Implement speaker initial extraction in `_render_speaker_avatar()`
+- [X] T015 [US2] Implement speaker initial extraction in `_render_speaker_avatar()`
   - Extract first character: `initial = speaker_name[0].upper() if speaker_name else "?"`
   - Use "?" if name is empty
 
 #### Group D: Tests (Parallel)
 
-- [ ] T016 [P] [US2] Write test `test_render_avatar_contains_fallback_div()` in `tests/ui/test_dashboard.py`
+- [X] T016 [P] [US2] Write test `test_render_avatar_contains_fallback_div()` in `tests/ui/test_dashboard.py`
   - Test: Avatar HTML contains placeholder div with initial
   - Assert: `'<div'` in html and speaker initial present
 
-- [ ] T017 [P] [US2] Write test `test_render_avatar_with_empty_name_uses_question_mark()` in `tests/ui/test_dashboard.py`
+- [X] T017 [P] [US2] Write test `test_render_avatar_with_empty_name_uses_question_mark()` in `tests/ui/test_dashboard.py`
   - Test: Empty name shows "?" placeholder
   - Call: `_render_speaker_avatar("test.jpg", "")`
   - Assert: `'?' in html`
 
-- [ ] T018 [P] [US2] Write test `test_render_avatar_has_onerror_handler()` in `tests/ui/test_dashboard.py`
+- [X] T018 [P] [US2] Write test `test_render_avatar_has_onerror_handler()` in `tests/ui/test_dashboard.py`
   - Test: Image has onerror attribute
   - Assert: `'onerror=' in html` and `"this.style.display='none'" in html`
 
@@ -209,18 +210,18 @@ streamlit run app.py
 
 ### Implementation Tasks
 
-- [ ] T019 [US3] Verify responsive layout with browser resize testing
+- [X] T019 [US3] Verify responsive layout with browser resize testing
   - Open dashboard in browser
   - Resize window from 1920px to 320px width
   - Verify: Photos maintain circular shape and 50px size
   - Verify: Speaker name wraps properly if needed
 
-- [ ] T020 [US3] Write test `test_render_avatar_applies_reduced_opacity_for_past_sessions()` in `tests/ui/test_dashboard.py`
+- [X] T020 [US3] Write test `test_render_avatar_applies_reduced_opacity_for_past_sessions()` in `tests/ui/test_dashboard.py`
   - Test: Past sessions have opacity 0.6
   - Call: `_render_speaker_avatar("test.jpg", "Jane", is_past=True)`
   - Assert: `'opacity: 0.6' in html`
 
-- [ ] T021 [US3] Write test `test_render_avatar_applies_full_opacity_for_upcoming_sessions()` in `tests/ui/test_dashboard.py`
+- [X] T021 [US3] Write test `test_render_avatar_applies_full_opacity_for_upcoming_sessions()` in `tests/ui/test_dashboard.py`
   - Test: Upcoming sessions have opacity 1.0
   - Call: `_render_speaker_avatar("test.jpg", "Jane", is_past=False)`
   - Assert: `'opacity: 1.0' in html`
@@ -233,21 +234,21 @@ streamlit run app.py
 
 ### Tasks
 
-- [ ] T022 [P] Run all unit tests and verify >80% coverage
+- [X] T022 [P] Run all unit tests and verify >80% coverage
   - Command: `pytest tests/ui/test_dashboard.py --cov=src/ui/dashboard --cov-report=term-missing`
   - Expected: All 9 tests pass, coverage >80%
 
-- [ ] T023 [P] Update main README.md with speaker photo requirements
+- [X] T023 [P] Update main README.md with speaker photo requirements
   - Add section: "Speaker Photo Requirements"
   - Document: Image location (`images/speakers/`), formats (JPG/PNG/WEBP), size recommendations (<10KB)
   - File: `README.md`
 
-- [ ] T024 [P] Verify no browser console errors when loading dashboard
+- [X] T024 [P] Verify no browser console errors when loading dashboard
   - Open browser DevTools (F12)
   - Run: `streamlit run app.py`
   - Check Console tab: Should have 0 errors (404s for missing photos are OK)
 
-- [ ] T025 Git commit with conventional format
+- [X] T025 Git commit with conventional format
   - Stage: `git add src/ui/dashboard.py tests/ui/test_dashboard.py`
   - Commit: `git commit -m "feat(ui): add circular speaker photo display in dashboard\n\n- Add _render_speaker_avatar() helper function\n- Update _render_session_card() to display photos\n- Implement automatic fallback to speaker initial\n- Add 9 unit tests for avatar rendering\n- Apply reduced opacity for past sessions\n\nCloses #002"`
   - Verify: Constitution-compliant commit message

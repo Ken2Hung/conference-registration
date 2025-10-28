@@ -2,6 +2,7 @@
 import streamlit as st
 from src.services.session_service import get_session_by_id, register_for_session
 from src.models.session import Session
+from src.ui.html_utils import html_block
 
 
 def _render_speaker_info(session: Session):
@@ -11,7 +12,7 @@ def _render_speaker_info(session: Session):
     Args:
         session: 議程物件
     """
-    st.markdown("""
+    st.markdown(html_block("""
         <h3 style="
             color: #cbd5e1;
             font-size: 20px;
@@ -23,7 +24,7 @@ def _render_speaker_info(session: Session):
         ">
             👤 講師資訊
         </h3>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
     # 講師資訊佈局
     col1, col2 = st.columns([1, 3])
@@ -34,7 +35,7 @@ def _render_speaker_info(session: Session):
             st.image(session.speaker.photo, use_column_width=True)
         except:
             # 如果照片無法載入，顯示佔位符
-            st.markdown("""
+            st.markdown(html_block("""
                 <div style="
                     width: 100%;
                     aspect-ratio: 1;
@@ -47,11 +48,11 @@ def _render_speaker_info(session: Session):
                 ">
                     👤
                 </div>
-            """, unsafe_allow_html=True)
+            """), unsafe_allow_html=True)
 
     with col2:
         # 講師姓名
-        st.markdown(f"""
+        st.markdown(html_block(f"""
             <div style="
                 color: #f1f5f9;
                 font-size: 24px;
@@ -60,10 +61,10 @@ def _render_speaker_info(session: Session):
             ">
                 {session.speaker.name}
             </div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
 
         # 講師簡介
-        st.markdown(f"""
+        st.markdown(html_block(f"""
             <div style="
                 color: #cbd5e1;
                 font-size: 14px;
@@ -71,7 +72,7 @@ def _render_speaker_info(session: Session):
             ">
                 {session.speaker.bio}
             </div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
 
 
 def _render_session_info(session: Session):
@@ -90,7 +91,7 @@ def _render_session_info(session: Session):
     badge = badge_styles.get(session.level, badge_styles["初"])
 
     # 標題與難度徽章
-    st.markdown(f"""
+    st.markdown(html_block(f"""
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
             <h1 style="
                 color: #f1f5f9;
@@ -113,10 +114,10 @@ def _render_session_info(session: Session):
                 {badge['label']}
             </div>
         </div>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
     # 描述
-    st.markdown(f"""
+    st.markdown(html_block(f"""
         <div style="
             color: #cbd5e1;
             font-size: 16px;
@@ -125,7 +126,7 @@ def _render_session_info(session: Session):
         ">
             {session.description}
         </div>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
     # 議程資訊卡片
     info_items = [
@@ -137,7 +138,7 @@ def _render_session_info(session: Session):
     cols = st.columns(3)
     for col, (label, value) in zip(cols, info_items):
         with col:
-            st.markdown(f"""
+            st.markdown(html_block(f"""
                 <div style="
                     background: #16213e;
                     padding: 16px;
@@ -159,7 +160,7 @@ def _render_session_info(session: Session):
                         {value}
                     </div>
                 </div>
-            """, unsafe_allow_html=True)
+            """), unsafe_allow_html=True)
 
 
 def _render_tags(session: Session):
@@ -169,7 +170,7 @@ def _render_tags(session: Session):
     Args:
         session: 議程物件
     """
-    st.markdown("""
+    st.markdown(html_block("""
         <h3 style="
             color: #cbd5e1;
             font-size: 20px;
@@ -181,7 +182,7 @@ def _render_tags(session: Session):
         ">
             🏷️ 技術標籤
         </h3>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
     tags_html = " ".join([
         f"""<span style="
@@ -208,7 +209,7 @@ def _render_learning_outcomes(session: Session):
     Args:
         session: 議程物件
     """
-    st.markdown("""
+    st.markdown(html_block("""
         <h3 style="
             color: #cbd5e1;
             font-size: 20px;
@@ -220,9 +221,9 @@ def _render_learning_outcomes(session: Session):
         ">
             🎯 學習成果
         </h3>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
-    st.markdown(f"""
+    st.markdown(html_block(f"""
         <div style="
             background: #16213e;
             padding: 20px;
@@ -234,7 +235,7 @@ def _render_learning_outcomes(session: Session):
         ">
             {session.learning_outcomes}
         </div>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
 
 def _render_registration_status(session: Session):
@@ -244,7 +245,7 @@ def _render_registration_status(session: Session):
     Args:
         session: 議程物件
     """
-    st.markdown("""
+    st.markdown(html_block("""
         <h3 style="
             color: #cbd5e1;
             font-size: 20px;
@@ -256,7 +257,7 @@ def _render_registration_status(session: Session):
         ">
             📊 報名狀態
         </h3>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
     # 計算報名資訊
     registration_pct = session.registration_percentage()
@@ -287,7 +288,7 @@ def _render_registration_status(session: Session):
     config = status_config.get(status, status_config["available"])
 
     # 報名進度卡片
-    st.markdown(f"""
+    st.markdown(html_block(f"""
         <div style="
             background: #16213e;
             padding: 24px;
@@ -341,7 +342,7 @@ def _render_registration_status(session: Session):
                 {registration_pct:.1f}% 已報名
             </div>
         </div>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
     # 報名按鈕
     st.markdown("<div style='margin-top: 24px;'></div>", unsafe_allow_html=True)
