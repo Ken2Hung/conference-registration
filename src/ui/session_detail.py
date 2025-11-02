@@ -1,6 +1,8 @@
 """Session detail page UI component styled to match the dashboard."""
 
+import re
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import streamlit as st
 
@@ -9,6 +11,7 @@ from src.services.session_service import get_session_by_id
 from src.services.registration_service import register_for_session, remove_registrant
 from src.services.admin_service import login_admin, is_admin_authenticated, logout_admin
 from src.ui.html_utils import html_block
+from src.ui.transcription_widget import render_transcription_widget
 
 LEVEL_STYLES = {
     "初": {
@@ -33,6 +36,29 @@ STATUS_CONFIG = {
     "full": {"label": "已額滿", "color": "#f87171"},
     "expired": {"label": "已過期", "color": "#94a3b8"},
 }
+
+
+def _sanitize_directory_name(value: str) -> str:
+    """Return a filesystem-friendly directory name that keeps Chinese characters."""
+    cleaned = re.sub(r"[^\w\u4e00-\u9fff-]+", "_", value.strip())
+    cleaned = cleaned.strip("_")
+    return cleaned or "session"
+
+
+def _session_transcription_dir(session: Session) -> Path:
+    """
+    Build the output directory for session recordings/transcripts.
+
+    Args:
+        session: Session metadata
+
+    Returns:
+        Path pointing to resource/<sanitized-title>
+    """
+    base_dir = Path("resource")
+    session_name = session.title or session.id
+    directory_name = _sanitize_directory_name(session_name)
+    return base_dir / directory_name
 
 
 def _inject_detail_styles():
@@ -493,7 +519,6 @@ def render_session_detail(session_id: str):
         st.markdown(_detail_registration_html(session), unsafe_allow_html=True)
 
         status = session.status()
-        disabled = status != "available"
 
         st.markdown("<div class='detail-register'>", unsafe_allow_html=True)
 
@@ -540,5 +565,52 @@ def render_session_detail(session_id: str):
             )
 
         st.markdown("</div>", unsafe_allow_html=True)
+
+        st.markdown("---")
+        st.markdown("#### 逐字稿轉錄")
+
+        transcription_dir = _session_transcription_dir(session)
+        directory_name = transcription_dir.name
+        st.caption(f"音訊與逐字稿將儲存在 `resource/{directory_name}/`")
+
+        if not is_admin_authenticated():
+            st.info("請先輸入管理者帳號密碼後才能啟動轉錄")
+
+            with st.form(f"transcription_admin_login_form_{session.id}"):
+                username = st.text_input(
+                    "管理員帳號",
+                    key=f"transcription_admin_username_{session.id}",
+                )
+                password = st.text_input(
+                    "管理員密碼",
+                    type="password",
+                    key=f"transcription_admin_password_{session.id}",
+                )
+                submit = st.form_submit_button("登入")
+
+                if submit:
+                    success, message = login_admin(username, password)
+                    if success:
+                        st.success(message)
+                        st.rerun()
+                    else:
+                        st.error(message)
+        else:
+            render_transcription_widget(
+                prefix=f"session_{session.id}",
+                resource_dir=transcription_dir,
+                show_header=False,
+                title=None,
+                caption=None,
+            )
+
+            if st.button(
+                "🚪 登出管理者",
+                key=f"transcription_admin_logout_{session.id}",
+                use_container_width=True,
+            ):
+                logout_admin()
+                st.info("已登出管理者")
+                st.rerun()
 
     st.markdown("</div></div>", unsafe_allow_html=True)
