@@ -39,6 +39,21 @@ TRANSCRIPT_REFRESH_INTERVAL_MS = 1200  # UI polling interval during recording
 VAD_SAMPLE_DENSITY = 0.12  # Minimum proportion of loud samples to treat as speech
 VAD_AMPLITUDE_GATE = 1100  # Sample amplitude gate used by density check
 
+MODEL_COST_CONFIG = {
+    "whisper-1": {
+        "label": "Whisper-1",
+        "input_cost_per_min": 0.006,  # USD per audio minute
+        "output_cost_per_token": 0.0,
+        "output_tokens_per_char": 0.25,  # Approx chars→tokens
+    },
+    "gpt-4o-mini-transcribe": {
+        "label": "GPT-4o Mini-Transcribe",
+        "input_cost_per_min": 0.003,  # Approx USD per audio minute
+        "output_cost_per_token": 5.0 / 1_000_000,  # USD per token
+        "output_tokens_per_char": 0.25,
+    },
+}
+
 DEFAULT_TITLE = "🎤 即時語音轉錄（Whisper API）"
 DEFAULT_CAPTION = "使用 WebRTC 錄音並透過 Whisper API 背景轉錄為逐字稿"
 
@@ -60,6 +75,8 @@ _worker_stop_events: dict[str, threading.Event] = {}
 _transcription_threads: dict[str, threading.Thread] = {}
 _transcription_stop_events: dict[str, threading.Event] = {}
 _last_transcription_time: dict[str, float] = {}
+_token_models: dict[str, str] = {}
+_active_model: Optional[str] = None
 
 # Cache API key check
 _api_key_checked = False
@@ -77,6 +94,7 @@ class TranscriptionUIConfig:
     caption: Optional[str] = DEFAULT_CAPTION
     controls_enabled: bool = True
     controls_disabled_reason: Optional[str] = None
+    model_name: str = "whisper-1"
 
 
 class _SessionState:
@@ -112,6 +130,102 @@ class _SessionState:
             del st.session_state[session_key]
 
 
+def _format_transcript_segments(segments: list) -> str:
+    """Convert transcript segments into displayable text."""
+    formatted_lines: list[str] = []
+    for seg in segments:
+        if isinstance(seg, dict):
+            formatted_lines.append(f"{seg.get('time', '')}  {seg.get('text', '')}")
+        else:
+            formatted_lines.append(str(seg))
+    return "\n".join(formatted_lines)
+
+
+def _get_model_config(model_name: str) -> dict[str, Any]:
+    """Return cost configuration for given model."""
+    return MODEL_COST_CONFIG.get(model_name, MODEL_COST_CONFIG["whisper-1"])
+
+
+def _audio_minutes_from_bytes(byte_count: int) -> float:
+    """Convert byte count to minutes based on mono int16 PCM."""
+    if byte_count <= 0:
+        return 0.0
+    frames = byte_count / SAMPLE_WIDTH
+    seconds = frames / SAMPLE_RATE
+    return seconds / 60.0
+
+
+def _estimate_transcription_cost(
+    model_name: str,
+    *,
+    audio_minutes: float,
+    transcript_text: str,
+) -> dict[str, float]:
+    """Estimate transcription cost based on audio duration and text length."""
+    config = _get_model_config(model_name)
+    input_cost = float(audio_minutes) * float(config.get("input_cost_per_min", 0.0))
+
+    char_count = len(transcript_text or "")
+    tokens_per_char = float(config.get("output_tokens_per_char", 0.0))
+    output_tokens = char_count * tokens_per_char
+    output_cost = output_tokens * float(config.get("output_cost_per_token", 0.0))
+
+    total_cost = input_cost + output_cost
+
+    return {
+        "total": total_cost,
+        "input_cost": input_cost,
+        "output_cost": output_cost,
+        "audio_minutes": audio_minutes,
+        "char_count": char_count,
+        "output_tokens": output_tokens,
+    }
+
+
+def _format_cost_caption(cost_info: dict[str, float]) -> str:
+    """Format cost info into a human friendly caption."""
+    total = cost_info["total"]
+    input_cost = cost_info["input_cost"]
+    output_cost = cost_info["output_cost"]
+    minutes = cost_info["audio_minutes"]
+    tokens = int(cost_info["output_tokens"])
+    return (
+        f"💰 預估費用：${total:.4f} "
+        f"(輸入 ${input_cost:.4f} + 輸出 ${output_cost:.4f}) · "
+        f"音訊約 {minutes:.2f} 分鐘 · "
+        f"輸出約 {tokens:,} tokens"
+    )
+
+
+def _calculate_cost_snapshot(
+    token: Optional[str],
+    fallback_model: str,
+) -> tuple[str, Optional[dict[str, float]], str, int]:
+    """
+    Return (model_name, cost_info, transcript_text) for the given token.
+
+    Args:
+        token: Active recording token.
+        fallback_model: Model name to use when token has no explicit mapping.
+    """
+    if not token:
+        return fallback_model, None, "", 0
+
+    with _recorder_lock:
+        model_name = _token_models.get(token, fallback_model)
+        bytes_written = _bytes_written.get(token, 0)
+        segments = list(_transcript_segments.get(token, []))
+
+    transcript_text = _format_transcript_segments(segments)
+    audio_minutes = _audio_minutes_from_bytes(bytes_written)
+    cost_info = _estimate_transcription_cost(
+        model_name,
+        audio_minutes=audio_minutes,
+        transcript_text=transcript_text,
+    )
+    return model_name, cost_info, transcript_text, len(segments)
+
+
 def render_transcription_widget(
     *,
     prefix: str,
@@ -121,6 +235,7 @@ def render_transcription_widget(
     caption: Optional[str] = DEFAULT_CAPTION,
     controls_enabled: bool = True,
     controls_disabled_reason: Optional[str] = None,
+    model_name: str = "whisper-1",
 ) -> None:
     """
     Render the reusable transcription interface.
@@ -142,6 +257,7 @@ def render_transcription_widget(
         caption=caption,
         controls_enabled=controls_enabled,
         controls_disabled_reason=controls_disabled_reason,
+        model_name=model_name,
     )
     state = _SessionState(config.prefix)
     _render_transcription_ui(config, state)
@@ -158,6 +274,10 @@ def _render_transcription_ui(config: TranscriptionUIConfig, state: _SessionState
     state.ensure("segment_count", 0)
     state.ensure("last_segment_count", 0)
     state.ensure("mic_permission_requested", False)
+    state.ensure("model_name", config.model_name)
+    state.ensure("last_model_name", config.model_name)
+    state.ensure("last_cost", None)
+    state.ensure("last_bytes_written", 0)
 
     if config.show_header:
         st.title(config.title)
@@ -335,6 +455,7 @@ def _render_status(state: _SessionState) -> None:
             bytes_written = _bytes_written.get(token, 0)
             last_rms = _last_rms.get(token, 0.0)
 
+    current_model = state.get("model_name", "whisper-1")
     path_str = state.get("path", "")
     if path_str:
         st.write(f"📁 檔案：`{path_str}`")
@@ -350,6 +471,20 @@ def _render_status(state: _SessionState) -> None:
     st.write(f"🔊 當前 RMS：{last_rms:.1f}")
     st.write(f"🎚️ 採樣率：{SAMPLE_RATE} Hz")
     st.write(f"📈 音量增益：{AUDIO_GAIN}x")
+
+    cost_info = None
+    if state.get("active", False) and token:
+        active_model, cost_info, _, _ = _calculate_cost_snapshot(token, current_model)
+        if active_model != current_model:
+            state.set("model_name", active_model)
+            current_model = active_model
+
+    if cost_info:
+        st.write(_format_cost_caption(cost_info))
+    else:
+        last_cost = state.get("last_cost")
+        if last_cost:
+            st.write(_format_cost_caption(last_cost))
 
     if state.get("active", False):
         st.write(f"📝 已轉錄段數：{state.get('segment_count', 0)}")
@@ -384,15 +519,7 @@ def _render_transcript_display(config: TranscriptionUIConfig, state: _SessionSta
             state.set("last_segment_count", segment_count)
             state.set("segment_count", segment_count)
 
-        # Format segments with timeline
-        formatted_lines = []
-        for seg in segments:
-            if isinstance(seg, dict):
-                formatted_lines.append(f"{seg['time']}  {seg['text']}")
-            else:
-                formatted_lines.append(str(seg))
-
-        current_transcript = "\n".join(formatted_lines)
+        current_transcript = _format_transcript_segments(segments)
         last_update_time = datetime.now().strftime("%H:%M:%S")
 
         # Prepare display content
@@ -422,19 +549,38 @@ def _render_transcript_display(config: TranscriptionUIConfig, state: _SessionSta
             key=display_key,
         )
         st.caption(caption_text)
+        _, live_cost, _, _ = _calculate_cost_snapshot(
+            token,
+            state.get("model_name", config.model_name),
+        )
+        if live_cost:
+            st.caption(_format_cost_caption(live_cost))
 
     # Show final transcript after recording stopped
     elif state.get("last_transcript"):
         state.delete("transcript_autorefresh")
 
+        last_transcript = state.get("last_transcript", "")
+        last_model_name = state.get("last_model_name", state.get("model_name", "whisper-1"))
+        cost_info = state.get("last_cost")
+        if not cost_info:
+            audio_minutes = _audio_minutes_from_bytes(state.get("last_bytes_written", 0))
+            cost_info = _estimate_transcription_cost(
+                last_model_name,
+                audio_minutes=audio_minutes,
+                transcript_text=last_transcript,
+            )
+
         st.text_area(
             "完整逐字稿",
-            value=state.get("last_transcript"),
+            value=last_transcript,
             height=300,
             help="格式：yyyy-mm-dd hh:mi:ss + 逐字稿內容",
         )
 
-        st.caption(f"📊 字數：{len(state.get('last_transcript', ''))} 字元")
+        st.caption(f"📊 字數：{len(last_transcript)} 字元")
+        if cost_info:
+            st.caption(_format_cost_caption(cost_info))
 
         last_path = state.get("last_path", "")
         if last_path:
@@ -453,9 +599,90 @@ def _render_transcript_display(config: TranscriptionUIConfig, state: _SessionSta
         st.info("點擊「開始錄音」後，即時轉錄結果將顯示在此處")
 
 
+def render_transcription_feed(
+    *,
+    prefix: str,
+    title: str = "📄 即時逐字稿（唯讀）",
+    empty_message: str = "目前沒有進行中的錄音",
+    height: int = 300,
+    refresh_interval_ms: int = TRANSCRIPT_REFRESH_INTERVAL_MS,
+    fallback_model: Optional[str] = None,
+) -> None:
+    """
+    Render a read-only view of the active transcription buffer.
+
+    Intended for non-admin viewers who should not control recording but can
+    observe the ongoing transcript.
+    """
+    st.markdown(f"#### {title}")
+
+    if refresh_interval_ms > 0:
+        st_autorefresh(
+            interval=refresh_interval_ms,
+            limit=None,
+            key=f"{prefix}_feed_autorefresh",
+        )
+
+    with _recorder_lock:
+        token = _active_token
+        active_model = _active_model
+
+    current_fallback = fallback_model or active_model or "whisper-1"
+
+    if not token:
+        st.info(empty_message)
+        return
+
+    model_name, cost_info, transcript_text, segment_count = _calculate_cost_snapshot(
+        token,
+        current_fallback,
+    )
+
+    last_update_time = datetime.now().strftime("%H:%M:%S")
+    token_preview = token[:8] if token else "N/A"
+
+    if transcript_text:
+        caption_text = (
+            f"📊 段數：{segment_count} | "
+            f"字元：{len(transcript_text)} | "
+            f"更新時間：{last_update_time} | Token：{token_preview}"
+        )
+        display_value = transcript_text
+    else:
+        caption_text = (
+            f"尚未取得轉錄內容，畫面將自動更新 | Token：{token_preview} | "
+            f"最後檢查：{last_update_time}"
+        )
+        display_value = (
+            "🎤 正在等待第一段轉錄結果...\n\n"
+            "麥克風錄音啟動後，逐字稿會自動出現在此處。"
+        )
+
+    st.text_area(
+        "即時逐字稿",
+        value=display_value,
+        height=height,
+        key=f"{prefix}_feed_text_area",
+    )
+    st.caption(caption_text)
+    if cost_info:
+        st.caption(_format_cost_caption(cost_info))
+
+    if transcript_text:
+        download_name = f"transcript-live-{datetime.now().strftime('%Y%m%d-%H%M%S')}.txt"
+        st.download_button(
+            "下載目前逐字稿 (.txt)",
+            data=transcript_text.encode("utf-8"),
+            file_name=download_name,
+            mime="text/plain",
+            use_container_width=True,
+            key=f"{prefix}_feed_download",
+        )
+
+
 def _start_recording(state: _SessionState, config: TranscriptionUIConfig) -> None:
     """Start recording and transcription."""
-    global _active_token
+    global _active_token, _active_model
 
     # Prevent multiple simultaneous recordings
     with _recorder_lock:
@@ -483,6 +710,7 @@ def _start_recording(state: _SessionState, config: TranscriptionUIConfig) -> Non
     start_time = time.time()
     with _recorder_lock:
         _active_token = token
+        _active_model = config.model_name
         _audio_queues[token] = queue.Queue(maxsize=128)
         _transcription_buffers[token] = []
         _transcript_segments[token] = []
@@ -492,6 +720,7 @@ def _start_recording(state: _SessionState, config: TranscriptionUIConfig) -> Non
         _last_transcription_time[token] = start_time
         _worker_stop_events[token] = threading.Event()
         _transcription_stop_events[token] = threading.Event()
+        _token_models[token] = config.model_name
 
     worker_thread = threading.Thread(target=_audio_worker, args=(token,), daemon=True)
     worker_thread.start()
@@ -515,13 +744,17 @@ def _start_recording(state: _SessionState, config: TranscriptionUIConfig) -> Non
     state.set("last_path", "")
     state.set("segment_count", 0)
     state.set("last_segment_count", 0)
+    state.set("model_name", config.model_name)
+    state.set("last_model_name", config.model_name)
+    state.set("last_cost", None)
+    state.set("last_bytes_written", 0)
 
     st.rerun()
 
 
 def _stop_recording(state: _SessionState, config: TranscriptionUIConfig) -> None:
     """Stop recording and save transcript."""
-    global _active_token
+    global _active_token, _active_model
 
     token = state.get("token")
     if not token:
@@ -532,6 +765,7 @@ def _stop_recording(state: _SessionState, config: TranscriptionUIConfig) -> None
     # Stop accepting new audio
     with _recorder_lock:
         _active_token = None
+        _active_model = None
 
     with _recorder_lock:
         worker_stop = _worker_stop_events.get(token)
@@ -562,6 +796,8 @@ def _stop_recording(state: _SessionState, config: TranscriptionUIConfig) -> None
     with _recorder_lock:
         wav_path = _wav_paths.get(token)
         segments = _transcript_segments.get(token, [])
+        bytes_written = _bytes_written.get(token, 0)
+        model_used = _token_models.get(token, state.get("model_name", "whisper-1"))
 
     formatted_lines = []
     for seg in segments:
@@ -575,6 +811,8 @@ def _stop_recording(state: _SessionState, config: TranscriptionUIConfig) -> None
     state.set("active", False)
     state.set("token", None)
     state.delete("transcript_autorefresh")
+    state.set("last_model_name", model_used)
+    state.set("last_bytes_written", bytes_written)
 
     if wav_path and wav_path.exists():
         file_size = wav_path.stat().st_size
@@ -591,6 +829,14 @@ def _stop_recording(state: _SessionState, config: TranscriptionUIConfig) -> None
     else:
         state.set("status", "❌ 錄音檔案不存在")
 
+    audio_minutes = _audio_minutes_from_bytes(bytes_written)
+    cost_info = _estimate_transcription_cost(
+        model_used,
+        audio_minutes=audio_minutes,
+        transcript_text=final_transcript,
+    )
+    state.set("last_cost", cost_info)
+
     with _recorder_lock:
         _audio_queues.pop(token, None)
         _transcription_buffers.pop(token, None)
@@ -604,6 +850,7 @@ def _stop_recording(state: _SessionState, config: TranscriptionUIConfig) -> None
         _transcription_threads.pop(token, None)
         _transcription_stop_events.pop(token, None)
         _last_transcription_time.pop(token, None)
+        _token_models.pop(token, None)
 
     st.rerun()
 
@@ -719,12 +966,15 @@ def _transcription_worker(token: str) -> None:
                 continue
 
             try:
+                with _recorder_lock:
+                    model_name = _token_models.get(token, "whisper-1")
+
                 wav_bytes = _pcm_to_wav_bytes(audio_chunk, SAMPLE_RATE)
                 wav_file = io.BytesIO(wav_bytes)
                 wav_file.name = "chunk.wav"
 
                 transcript = client.audio.transcriptions.create(
-                    model="whisper-1",
+                    model=model_name,
                     file=wav_file,
                     language="zh",
                     response_format="text",
@@ -745,7 +995,7 @@ def _transcription_worker(token: str) -> None:
                             segment_count = len(segments)
                             print(
                                 f"[Transcription] Segment {segment_count} "
-                                f"[{time_str}] (RMS={chunk_rms:.1f}): "
+                                f"[{time_str}] (model={model_name}, RMS={chunk_rms:.1f}): "
                                 f"{transcript_text[:50]}..."
                             )
                             print(
@@ -823,4 +1073,9 @@ def _save_transcript(wav_path: Path, transcript: str) -> Path:
     return transcript_path
 
 
-__all__ = ["render_transcription_widget", "TranscriptionUIConfig"]
+__all__ = [
+    "render_transcription_widget",
+    "render_transcription_feed",
+    "TranscriptionUIConfig",
+    "MODEL_COST_CONFIG",
+]

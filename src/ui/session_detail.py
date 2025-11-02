@@ -11,7 +11,15 @@ from src.services.session_service import get_session_by_id
 from src.services.registration_service import register_for_session, remove_registrant
 from src.services.admin_service import login_admin, is_admin_authenticated, logout_admin
 from src.ui.html_utils import html_block
-from src.ui.transcription_widget import render_transcription_widget
+from src.ui.transcription_widget import (
+    render_transcription_widget,
+    render_transcription_feed,
+    MODEL_COST_CONFIG,
+)
+from src.ui.transcript_history import render_transcript_history
+from streamlit_autorefresh import st_autorefresh
+
+SESSION_MODEL_SELECTIONS: dict[str, str] = {}
 
 LEVEL_STYLES = {
     "初": {
@@ -477,6 +485,7 @@ def render_session_detail(session_id: str):
     Args:
         session_id: Session identifier
     """
+    global SESSION_MODEL_SELECTIONS
     session = get_session_by_id(session_id)
 
     if session is None:
@@ -506,13 +515,98 @@ def render_session_detail(session_id: str):
     st.markdown("<div class='detail-card'>", unsafe_allow_html=True)
     st.markdown(_detail_header_html(session), unsafe_allow_html=True)
 
+    admin_logged_in = is_admin_authenticated()
+    transcription_dir = _session_transcription_dir(session)
+    directory_name = transcription_dir.name
+
     main_col, side_col = st.columns([1.6, 1], gap="large")
 
     with main_col:
         st.markdown(_detail_description_html(session), unsafe_allow_html=True)
         st.markdown(_detail_learning_html(session), unsafe_allow_html=True)
         st.markdown(_detail_registrants_html(session), unsafe_allow_html=True)
+
         _render_admin_registrant_controls(session)
+
+        st.markdown("---")
+        st.markdown("#### 逐字稿轉錄")
+        st.caption(f"音訊與逐字稿將儲存在 `resource/{directory_name}/`")
+
+        if admin_logged_in:
+            model_state_key = f"session_{session.id}_model_choice"
+            model_options = list(MODEL_COST_CONFIG.keys())
+            stored_model = SESSION_MODEL_SELECTIONS.get(session.id, model_options[0])
+            if model_state_key not in st.session_state:
+                st.session_state[model_state_key] = stored_model
+
+            selected_model = st.session_state[model_state_key]
+
+            render_transcription_widget(
+                prefix=f"session_{session.id}",
+                resource_dir=transcription_dir,
+                show_header=False,
+                title=None,
+                caption=None,
+                model_name=selected_model,
+            )
+
+            with st.container():
+                st.selectbox(
+                    "選擇轉錄模型",
+                    options=model_options,
+                    format_func=lambda opt: f"{MODEL_COST_CONFIG.get(opt, {}).get('label', opt)} ({opt})",
+                    key=model_state_key,
+                )
+
+            SESSION_MODEL_SELECTIONS[session.id] = st.session_state[model_state_key]
+
+            if st.button(
+                "🚪 登出管理者",
+                key=f"transcription_admin_logout_{session.id}",
+                use_container_width=True,
+            ):
+                logout_admin()
+                st.info("已登出管理者")
+                st.rerun()
+
+        else:
+            st.info("目前僅提供逐字稿檢視與下載，若需啟動或停止錄音請登入管理員帳號。")
+            render_transcription_feed(
+                prefix=f"session_{session.id}_viewer",
+                title="📡 即時逐字稿（唯讀）",
+                empty_message="目前沒有進行中的錄音，或錄音尚未啟動。",
+                refresh_interval_ms=2500,
+                fallback_model=SESSION_MODEL_SELECTIONS.get(session.id, list(MODEL_COST_CONFIG.keys())[0]),
+            )
+
+            with st.form(f"transcription_admin_login_form_{session.id}"):
+                username = st.text_input(
+                    "管理員帳號",
+                    key=f"transcription_admin_username_{session.id}",
+                )
+                password = st.text_input(
+                    "管理員密碼",
+                    type="password",
+                    key=f"transcription_admin_password_{session.id}",
+                )
+                submit = st.form_submit_button("登入")
+
+                if submit:
+                    success, message = login_admin(username, password)
+                    if success:
+                        st.success(message)
+                        st.rerun()
+                    else:
+                        st.error(message)
+
+        render_transcript_history(
+            resource_dir=transcription_dir,
+            heading="🗂️ 歷史逐字稿",
+            description="以下列表以非同步方式載入最近的 Whisper 轉錄結果。",
+            empty_message="此議程尚未產生逐字稿檔案。",
+            max_entries=6,
+            key_prefix=f"session_{session.id}",
+        )
 
     with side_col:
         st.markdown(_detail_speaker_html(session), unsafe_allow_html=True)
@@ -565,52 +659,5 @@ def render_session_detail(session_id: str):
             )
 
         st.markdown("</div>", unsafe_allow_html=True)
-
-        st.markdown("---")
-        st.markdown("#### 逐字稿轉錄")
-
-        transcription_dir = _session_transcription_dir(session)
-        directory_name = transcription_dir.name
-        st.caption(f"音訊與逐字稿將儲存在 `resource/{directory_name}/`")
-
-        if not is_admin_authenticated():
-            st.info("請先輸入管理者帳號密碼後才能啟動轉錄")
-
-            with st.form(f"transcription_admin_login_form_{session.id}"):
-                username = st.text_input(
-                    "管理員帳號",
-                    key=f"transcription_admin_username_{session.id}",
-                )
-                password = st.text_input(
-                    "管理員密碼",
-                    type="password",
-                    key=f"transcription_admin_password_{session.id}",
-                )
-                submit = st.form_submit_button("登入")
-
-                if submit:
-                    success, message = login_admin(username, password)
-                    if success:
-                        st.success(message)
-                        st.rerun()
-                    else:
-                        st.error(message)
-        else:
-            render_transcription_widget(
-                prefix=f"session_{session.id}",
-                resource_dir=transcription_dir,
-                show_header=False,
-                title=None,
-                caption=None,
-            )
-
-            if st.button(
-                "🚪 登出管理者",
-                key=f"transcription_admin_logout_{session.id}",
-                use_container_width=True,
-            ):
-                logout_admin()
-                st.info("已登出管理者")
-                st.rerun()
 
     st.markdown("</div></div>", unsafe_allow_html=True)
