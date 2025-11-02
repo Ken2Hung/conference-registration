@@ -1,7 +1,7 @@
 """Data validation utilities."""
 import re
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 
 def validate_session(session_data: Dict[str, Any]) -> bool:
@@ -40,7 +40,11 @@ def validate_session(session_data: Dict[str, Any]) -> bool:
         raise ValueError("Description cannot be empty")
 
     validate_date_format(session_data["date"])
-    validate_time_format(session_data["time"])
+    time_value = session_data["time"]
+    if isinstance(time_value, str) and time_value.strip().upper() == "TBD":
+        pass
+    else:
+        validate_time_format(time_value)
 
     if not session_data["location"] or not session_data["location"].strip():
         raise ValueError("Location cannot be empty")
@@ -181,3 +185,119 @@ def validate_time_format(time_str: str) -> bool:
         raise
 
     return True
+
+
+def validate_name(name: str) -> Tuple[bool, str]:
+    """
+    Validate attendee name.
+
+    Args:
+        name: Name to validate
+
+    Returns:
+        Tuple of (is_valid: bool, error_message: str)
+        - (True, "") if valid
+        - (False, "姓名不可為空") if empty
+        - (False, "姓名長度不可超過 50 字元") if too long
+    """
+    if not name or not name.strip():
+        return False, "姓名不可為空"
+    if len(name) > 50:
+        return False, "姓名長度不可超過 50 字元"
+    return True, ""
+
+
+def normalize_name(name: str) -> str:
+    """
+    Normalize name for duplicate comparison.
+
+    Args:
+        name: Name to normalize
+
+    Returns:
+        Normalized name (trimmed, lowercased)
+
+    Behavior:
+        - Trims leading/trailing whitespace
+        - Converts to lowercase (for Latin chars)
+        - Preserves internal spacing
+        - Example: " 張三 " → "張三", "John Doe" → "john doe"
+    """
+    return name.strip().lower()
+
+
+def validate_session_date(date_str: str, allow_past: bool = False) -> Tuple[bool, str]:
+    """
+    Validate session date.
+
+    Args:
+        date_str: Date in YYYY-MM-DD format
+        allow_past: If True, past dates are allowed (for editing existing sessions)
+
+    Returns:
+        Tuple of (is_valid: bool, error_message: str)
+        - (True, "") if valid
+        - (False, "日期格式錯誤") if format invalid
+        - (False, "日期不可為過去") if date < today and allow_past=False
+    """
+    # Check format
+    if not isinstance(date_str, str):
+        return False, "日期格式錯誤"
+
+    if not re.match(r"^\d{4}-\d{2}-\d{2}$", date_str):
+        return False, "日期格式錯誤"
+
+    # Parse date
+    try:
+        date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+    except ValueError:
+        return False, "日期格式錯誤"
+
+    # Check if past (if not allowed)
+    if not allow_past:
+        today = datetime.now().date()
+        if date_obj.date() < today:
+            return False, "日期不可為過去"
+
+    return True, ""
+
+
+def validate_capacity(capacity: int, current_registered: int = 0) -> Tuple[bool, str]:
+    """
+    Validate session capacity.
+
+    Args:
+        capacity: Desired capacity
+        current_registered: Current registration count (for updates)
+
+    Returns:
+        Tuple of (is_valid: bool, error_message: str)
+        - (True, "") if valid
+        - (False, "容量必須為正整數") if capacity <= 0
+        - (False, "容量不可低於目前已報名人數") if capacity < current_registered
+    """
+    if not isinstance(capacity, int) or capacity <= 0:
+        return False, "容量必須為正整數"
+
+    if capacity < current_registered:
+        return False, "容量不可低於目前已報名人數"
+
+    return True, ""
+
+
+def validate_level(level: str) -> Tuple[bool, str]:
+    """
+    Validate session level.
+
+    Args:
+        level: Level to validate
+
+    Returns:
+        Tuple of (is_valid: bool, error_message: str)
+        - (True, "") if valid ("初", "中", or "高")
+        - (False, "難度必須為「初」、「中」或「高」") if invalid
+    """
+    valid_levels = ["初", "中", "高"]
+    if level not in valid_levels:
+        return False, "難度必須為「初」、「中」或「高」"
+    return True, ""

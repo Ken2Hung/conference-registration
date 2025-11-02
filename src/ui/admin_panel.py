@@ -1,0 +1,674 @@
+"""Admin panel UI component for session management."""
+import logging
+import re
+import traceback
+from datetime import datetime, timedelta
+from pathlib import Path
+
+import streamlit as st
+import streamlit.components.v1 as components
+
+from src.services.admin_service import (
+    login_admin,
+    logout_admin,
+    is_admin_authenticated
+)
+from src.services.session_service import (
+    get_all_sessions,
+    get_session_by_id,
+    create_session,
+    update_session,
+    delete_session,
+)
+from src.utils.exceptions import SessionNotFoundError
+from src.ui.html_utils import html_block
+
+
+logger = logging.getLogger(__name__)
+
+SPEAKER_PHOTO_DIR = Path("resource/speaker-photo")
+ALLOWED_PHOTO_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif"}
+
+
+def _show_admin_exception(error: Exception, context: str) -> None:
+    """Display error details in UI and log full traceback."""
+    logger.exception("Admin panel error during %s", context)
+
+    st.error(f"❌ {context}失敗：{error}")
+    with st.expander("🔍 錯誤詳情", expanded=isinstance(error, RecursionError)):
+        st.code("".join(traceback.format_exception(type(error), error, error.__traceback__)))
+
+
+def _scroll_to(element_id: str) -> None:
+    """Scroll to the element with the given ID using smooth scrolling."""
+    components.html(
+        f"""
+        <script>
+        const target = parent.document.getElementById('{element_id}');
+        if (target) {{
+            target.scrollIntoView({{ behavior: 'smooth', block: 'start' }});
+        }}
+        </script>
+        """,
+        height=0,
+    )
+
+
+def _sanitize_filename(name: str) -> str:
+    """Generate a safe filename fragment from speaker name."""
+    sanitized = re.sub(r"[^A-Za-z0-9_-]+", "_", name.strip())
+    sanitized = sanitized.strip("_").lower()
+    return sanitized or "speaker"
+
+
+def _save_speaker_photo(uploaded_file: object, speaker_name: str) -> str:
+    """Persist uploaded speaker photo and return relative path."""
+    if uploaded_file is None:
+        raise ValueError("請上傳講者照片")
+
+    suffix = Path(uploaded_file.name).suffix.lower()
+    if suffix not in ALLOWED_PHOTO_EXTENSIONS:
+        raise ValueError("不支援的圖片格式，請上傳 png/jpg/jpeg/gif 檔案")
+
+    SPEAKER_PHOTO_DIR.mkdir(parents=True, exist_ok=True)
+
+    filename = f"{_sanitize_filename(speaker_name)}_{int(datetime.now().timestamp())}{suffix}"
+    file_path = SPEAKER_PHOTO_DIR / filename
+
+    try:
+        file_path.write_bytes(uploaded_file.getbuffer())
+    except Exception as error:  # pragma: no cover - filesystem issues
+        raise ValueError(f"無法儲存講者照片：{error}") from error
+
+    return str(file_path)
+
+
+def _inject_admin_styles():
+    """Inject admin panel styles."""
+    st.markdown(
+        html_block(
+            """
+            <style>
+            .admin-header {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                padding: 24px 32px;
+                border-radius: 16px;
+                margin-bottom: 24px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .admin-title {
+                color: #ffffff;
+                font-size: 28px;
+                font-weight: 700;
+                margin: 0;
+            }
+            .admin-subtitle {
+                color: rgba(255, 255, 255, 0.85);
+                font-size: 14px;
+                margin-top: 4px;
+            }
+            form[data-testid="stForm"][aria-label="admin_login_form"] {
+                max-width: 420px;
+                margin: 80px auto;
+                background: rgba(15, 17, 40, 0.96);
+                border-radius: 24px;
+                padding: 36px 40px;
+                border: 1px solid rgba(148, 163, 184, 0.18);
+                box-shadow: 0 24px 55px rgba(15, 17, 40, 0.55);
+            }
+            form[data-testid="stForm"][aria-label="admin_login_form"] > div:first-child {
+                display: flex;
+                flex-direction: column;
+                gap: 18px;
+            }
+            .login-title {
+                color: #f8fafc;
+                font-size: 30px;
+                font-weight: 700;
+                text-align: center;
+                margin-bottom: 8px;
+            }
+            .login-description {
+                color: rgba(203, 213, 225, 0.85);
+                font-size: 14px;
+                text-align: center;
+            }
+            .session-table {
+                background: rgba(15, 17, 40, 0.92);
+                border-radius: 16px;
+                padding: 20px;
+                margin-top: 16px;
+            }
+            .session-row {
+                display: grid;
+                grid-template-columns: 2fr 1fr 1fr 1fr 140px;
+                gap: 16px;
+                padding: 16px;
+                border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+                align-items: center;
+            }
+            .session-row:last-child {
+                border-bottom: none;
+            }
+            .session-row-header {
+                font-weight: 700;
+                color: #a855f7;
+                font-size: 13px;
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+            }
+            .session-cell {
+                color: #f8fafc;
+                font-size: 14px;
+            }
+            .session-cell-title {
+                font-weight: 600;
+                color: #f8fafc;
+            }
+            .session-cell-meta {
+                font-size: 12px;
+                color: rgba(148, 163, 184, 0.7);
+                margin-top: 4px;
+            }
+            .session-actions {
+                display: flex;
+                gap: 8px;
+            }
+            </style>
+            """
+        ),
+        unsafe_allow_html=True,
+    )
+
+
+def render_login_page():
+    """Render admin login page."""
+    _inject_admin_styles()
+
+    with st.form("admin_login_form", clear_on_submit=False):
+        st.markdown("<h1 class='login-title'>🔐 管理員登入</h1>", unsafe_allow_html=True)
+        st.markdown("<div class='login-description'>請輸入管理員帳號與密碼以繼續</div>", unsafe_allow_html=True)
+
+        username = st.text_input("帳號", placeholder="請輸入管理員帳號", key="admin_username_input")
+        password = st.text_input("密碼", type="password", placeholder="請輸入密碼", key="admin_password_input")
+
+        submit_col, cancel_col = st.columns(2, gap="small")
+        with submit_col:
+            submit = st.form_submit_button("登入", use_container_width=True, type="primary")
+        with cancel_col:
+            cancel = st.form_submit_button("返回", use_container_width=True)
+
+        if submit:
+            if not username or not password:
+                st.error("❌ 請輸入帳號和密碼")
+            else:
+                success, message = login_admin(username, password)
+                if success:
+                    st.success(f"✅ {message}")
+                else:
+                    st.error(f"❌ {message}")
+
+        if cancel:
+            st.session_state.current_page = "dashboard"
+
+
+def render_admin_panel():
+    """Render admin management panel."""
+    try:
+        if not is_admin_authenticated():
+            render_login_page()
+            return
+
+        _inject_admin_styles()
+
+        feedback = st.session_state.get("admin_feedback")
+        if feedback:
+            level, message = feedback
+
+            if level == "success":
+                st.success(message)
+            elif level == "error":
+                st.error(message)
+            elif level == "warning":
+                st.warning(message)
+            else:
+                st.info(message)
+
+            del st.session_state["admin_feedback"]
+
+        # Header
+        st.markdown(
+            html_block(
+                """
+                <div class="admin-header">
+                    <div>
+                        <h1 class="admin-title">📊 管理員面板</h1>
+                        <div class="admin-subtitle">議程管理與設定</div>
+                    </div>
+                </div>
+                """
+            ),
+            unsafe_allow_html=True,
+        )
+
+        # Action buttons
+        action_col1, action_col2, action_col3, action_col4 = st.columns([2, 1, 1, 1], gap="small")
+        with action_col1:
+            st.markdown("### 議程列表")
+        with action_col2:
+            if st.button("➕ 新增議程", use_container_width=True):
+                st.session_state.admin_action = "create"
+                st.session_state.admin_scroll_target = "create"
+        with action_col3:
+            if st.button("🏠 返回首頁", use_container_width=True):
+                st.session_state.current_page = "dashboard"
+                return
+        with action_col4:
+            if st.button("🚪 登出", use_container_width=True):
+                logout_admin()
+                st.session_state.current_page = "dashboard"
+                st.success("已登出")
+                return
+
+        # Session list
+        sessions = get_all_sessions()
+
+        if not sessions:
+            st.info("📝 目前沒有任何議程")
+            return
+
+        # Table header
+        st.markdown(
+            html_block(
+                """
+                <div class="session-table">
+                    <div class="session-row session-row-header">
+                        <div>議程標題</div>
+                        <div>日期</div>
+                        <div>難度</div>
+                        <div>報名狀態</div>
+                        <div>操作</div>
+                    </div>
+                </div>
+                """
+            ),
+            unsafe_allow_html=True,
+        )
+
+        # Session rows
+        for session in sessions:
+            col1, col2, col3, col4, col5 = st.columns([2, 1, 1, 1, 1.4], gap="small")
+
+            with col1:
+                st.markdown(f"**{session.title}**")
+                st.caption(f"{session.time} · {session.location}")
+
+            with col2:
+                st.text(session.date)
+
+            with col3:
+                level_emoji = {"初": "🔵", "中": "🟣", "高": "🔴"}
+                st.text(f"{level_emoji.get(session.level, '')} {session.level}級")
+
+            with col4:
+                status = session.status()
+                status_emoji = {
+                    "available": "✅",
+                    "full": "🔴",
+                    "expired": "⏰"
+                }
+                st.text(f"{status_emoji.get(status, '')} {session.registered}/{session.capacity}")
+
+            with col5:
+                btn_col1, btn_col2 = st.columns(2, gap="small")
+                with btn_col1:
+                    if st.button("✏️", key=f"edit_{session.id}", help="編輯"):
+                        st.session_state.admin_action = "edit"
+                        st.session_state.edit_session_id = session.id
+                with btn_col2:
+                    if st.button("🗑️", key=f"delete_{session.id}", help="刪除"):
+                        st.session_state.admin_action = "delete"
+                        st.session_state.delete_session_id = session.id
+
+        # Handle actions
+        if st.session_state.get("admin_action") == "create":
+            render_create_session_form()
+        elif st.session_state.get("admin_action") == "edit":
+            render_edit_session_form()
+        elif st.session_state.get("admin_action") == "delete":
+            render_delete_confirmation()
+    except Exception as error:
+        _show_admin_exception(error, "載入管理員面板")
+
+
+def render_create_session_form():
+    """Render create session form dialog."""
+    st.markdown("<div id='admin-create-session-anchor'></div>", unsafe_allow_html=True)
+
+    if st.session_state.pop("admin_scroll_target", None) == "create":
+        _scroll_to("admin-create-session-anchor")
+
+    st.markdown("---")
+    st.markdown("### ➕ 新增議程")
+
+    with st.form("create_session_form", clear_on_submit=False):
+        title = st.text_input("議程標題*", placeholder="例：Python 網頁爬蟲入門")
+        description = st.text_area("議程描述*", placeholder="詳細說明議程內容...")
+
+        col1, col2 = st.columns(2, gap="small")
+        with col1:
+            date = st.date_input("日期*", value=datetime.now().date())
+        with col2:
+            time_mode = st.radio(
+                "時間模式",
+                options=["具體時間", "TBD"],
+                horizontal=True,
+                index=0,
+                key="create_time_mode"
+            )
+
+            start_time = end_time = None
+            if time_mode == "具體時間":
+                now = datetime.now()
+                default_start = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0).time()
+                default_end = (datetime.combine(now.date(), default_start) + timedelta(hours=2)).time()
+                start_col, end_col = st.columns(2, gap="small")
+                with start_col:
+                    start_time = st.time_input("開始時間*", value=default_start, key="create_session_start_time")
+                with end_col:
+                    end_time = st.time_input("結束時間*", value=default_end, key="create_session_end_time")
+
+        location = st.text_input("地點*", placeholder="例：線上 Zoom 會議室")
+
+        col1, col2 = st.columns(2, gap="small")
+        with col1:
+            level = st.selectbox("難度*", ["初", "中", "高"])
+        with col2:
+            capacity = st.number_input("容量*", min_value=1, value=50, step=1)
+
+        tags = st.text_input("標籤*", placeholder="用逗號分隔，例：Python,Web Scraping")
+        learning_outcomes = st.text_area("學習成果*", placeholder="學員將學到什麼...")
+
+        st.markdown("#### 講者資訊")
+        speaker_name = st.text_input("講者姓名*")
+        speaker_photo_upload = st.file_uploader("講者照片*", type=["png", "jpg", "jpeg", "gif"])
+        speaker_bio = st.text_area("講者簡介*")
+
+        col1, col2 = st.columns(2, gap="small")
+        with col1:
+            submit = st.form_submit_button("✅ 建立", type="primary", use_container_width=True)
+        with col2:
+            cancel = st.form_submit_button("❌ 取消", use_container_width=True)
+
+        if submit:
+            tags_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
+
+            if time_mode == "具體時間":
+                if end_time <= start_time:
+                    st.error("❌ 結束時間必須晚於開始時間")
+                    return
+                time_value = f"{start_time.strftime('%H:%M')}-{end_time.strftime('%H:%M')}"
+            else:
+                time_value = "TBD"
+
+            if speaker_photo_upload is None:
+                st.error("❌ 請上傳講者照片")
+                return
+
+            speaker_name_value = speaker_name.strip()
+
+            try:
+                photo_path = _save_speaker_photo(speaker_photo_upload, speaker_name_value or "speaker")
+            except ValueError as error:
+                st.error(f"❌ 上傳失敗：{error}")
+                return
+
+            session_payload = {
+                "title": title.strip(),
+                "description": description.strip(),
+                "date": date.isoformat(),
+                "time": time_value,
+                "location": location.strip(),
+                "level": level,
+                "tags": tags_list,
+                "learning_outcomes": learning_outcomes.strip(),
+                "capacity": int(capacity),
+                "speaker": {
+                    "name": speaker_name_value,
+                    "photo": photo_path,
+                    "bio": speaker_bio.strip(),
+                },
+            }
+
+            try:
+                new_session_id = create_session(session_payload)
+            except ValueError as error:
+                st.error(f"❌ 建立失敗：{error}")
+            except Exception as error:  # pragma: no cover - defensive logging for Streamlit UI
+                _show_admin_exception(error, "建立議程")
+            else:
+                st.session_state.admin_feedback = (
+                    "success",
+                    f"✅ 議程已建立（ID: {new_session_id}）",
+                )
+                st.session_state.admin_action = None
+
+        if cancel:
+            del st.session_state.admin_action
+
+
+def render_edit_session_form():
+    """Render edit session form dialog."""
+    st.markdown("---")
+    st.markdown("### ✏️ 編輯議程")
+    session_id = st.session_state.get("edit_session_id")
+
+    if not session_id:
+        st.error("❌ 找不到要編輯的議程 ID")
+        if st.button("返回列表"):
+            st.session_state.admin_action = None
+        return
+
+    session = get_session_by_id(session_id)
+    if session is None:
+        st.error("❌ 找不到指定的議程")
+        if st.button("返回列表"):
+            st.session_state.admin_action = None
+            st.session_state.edit_session_id = None
+        return
+
+    default_date = datetime.strptime(session.date, "%Y-%m-%d").date()
+    tags_default = ", ".join(session.tags)
+
+    with st.form("edit_session_form", clear_on_submit=False):
+        title = st.text_input("議程標題*", value=session.title)
+        description = st.text_area("議程描述*", value=session.description)
+
+        col1, col2 = st.columns(2, gap="small")
+        with col1:
+            date = st.date_input("日期*", value=default_date)
+        with col2:
+            time_mode = st.radio(
+                "時間模式",
+                options=["具體時間", "TBD"],
+                horizontal=True,
+                index=0 if session.time != "TBD" else 1,
+                key=f"edit_time_mode_{session_id}"
+            )
+
+            start_time = end_time = None
+            if time_mode == "具體時間":
+                try:
+                    start_str, end_str = [part.strip() for part in session.time.split("-")]
+                    start_default = datetime.strptime(start_str, "%H:%M").time()
+                    end_default = datetime.strptime(end_str, "%H:%M").time()
+                except (ValueError, AttributeError):
+                    start_default = datetime.now().replace(minute=0, second=0, microsecond=0).time()
+                    end_default = (datetime.combine(datetime.now().date(), start_default) + timedelta(hours=2)).time()
+                start_col, end_col = st.columns(2, gap="small")
+                with start_col:
+                    start_time = st.time_input(
+                        "開始時間*",
+                        value=start_default,
+                        key=f"edit_session_start_{session_id}"
+                    )
+                with end_col:
+                    end_time = st.time_input(
+                        "結束時間*",
+                        value=end_default,
+                        key=f"edit_session_end_{session_id}"
+                    )
+
+        location = st.text_input("地點*", value=session.location)
+
+        col1, col2 = st.columns(2, gap="small")
+        with col1:
+            level = st.selectbox("難度*", ["初", "中", "高"], index=["初", "中", "高"].index(session.level))
+        with col2:
+            capacity = st.number_input("容量*", min_value=1, value=session.capacity, step=1)
+
+        tags = st.text_input("標籤*", value=tags_default)
+        learning_outcomes = st.text_area("學習成果*", value=session.learning_outcomes)
+
+        st.markdown("#### 講者資訊")
+        speaker_name = st.text_input("講者姓名*", value=session.speaker.name)
+        st.caption(f"目前講者照片：{session.speaker.photo}")
+        speaker_photo_upload = st.file_uploader(
+            "更新講者照片 (選填)",
+            type=["png", "jpg", "jpeg", "gif"],
+            key=f"edit_speaker_photo_{session_id}"
+        )
+        speaker_bio = st.text_area("講者簡介*", value=session.speaker.bio)
+
+        col1, col2 = st.columns(2, gap="small")
+        with col1:
+            submit = st.form_submit_button("💾 儲存變更", type="primary", use_container_width=True)
+        with col2:
+            cancel = st.form_submit_button("❌ 取消", use_container_width=True)
+
+        if submit:
+            tags_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
+            if time_mode == "具體時間":
+                if end_time <= start_time:
+                    st.error("❌ 結束時間必須晚於開始時間")
+                    return
+                time_value = f"{start_time.strftime('%H:%M')}-{end_time.strftime('%H:%M')}"
+            else:
+                time_value = "TBD"
+
+            photo_path = session.speaker.photo
+            if speaker_photo_upload is not None:
+                try:
+                    photo_path = _save_speaker_photo(speaker_photo_upload, speaker_name.strip() or "speaker")
+                except ValueError as error:
+                    st.error(f"❌ 上傳失敗：{error}")
+                    return
+
+            updates = {
+                "title": title.strip(),
+                "description": description.strip(),
+                "date": date.isoformat(),
+                "time": time_value,
+                "location": location.strip(),
+                "level": level,
+                "tags": tags_list,
+                "learning_outcomes": learning_outcomes.strip(),
+                "capacity": int(capacity),
+                "speaker": {
+                    "name": speaker_name.strip(),
+                    "photo": photo_path,
+                    "bio": speaker_bio.strip(),
+                },
+            }
+
+            try:
+                update_session(session_id, updates)
+            except SessionNotFoundError:
+                st.error("❌ 找不到此議程，請重新整理列表")
+            except ValueError as error:
+                st.error(f"❌ 更新失敗：{error}")
+            except Exception as error:  # pragma: no cover - defensive logging for Streamlit UI
+                _show_admin_exception(error, "更新議程")
+            else:
+                st.session_state.admin_feedback = (
+                    "success",
+                    f"✅ 已更新議程（ID: {session_id}）",
+                )
+                st.session_state.admin_action = None
+                st.session_state.edit_session_id = None
+
+        if cancel:
+            del st.session_state.admin_action
+            if "edit_session_id" in st.session_state:
+                del st.session_state.edit_session_id
+
+
+def render_delete_confirmation():
+    """Render delete confirmation dialog as a modal."""
+    session_id = st.session_state.get("delete_session_id")
+
+    if not session_id:
+        st.session_state.admin_action = None
+        return
+
+    session = get_session_by_id(session_id)
+
+    if session is None:
+        st.session_state.admin_feedback = ("error", "❌ 找不到要刪除的議程")
+        st.session_state.admin_action = None
+        st.session_state.pop("delete_session_id", None)
+        return
+
+    with st.container():
+        st.markdown(
+            """
+            <div style="
+                border: 1px solid rgba(248, 113, 113, 0.45);
+                background: rgba(248, 113, 113, 0.1);
+                padding: 20px;
+                border-radius: 16px;
+                margin-top: 16px;
+            ">
+            """,
+            unsafe_allow_html=True,
+        )
+
+        st.error("⚠️ 此操作無法復原，確定要刪除這個議程嗎？")
+        st.markdown(f"**{session.title}**")
+        st.caption(f"{session.date} · {session.time} · {session.location}")
+
+        confirm_col, cancel_col = st.columns(2, gap="small")
+
+        with confirm_col:
+            if st.button("✅ 確定刪除", type="primary", use_container_width=True, key=f"confirm_delete_{session_id}"):
+                try:
+                    success = delete_session(session_id)
+                except Exception as error:  # pragma: no cover - defensive
+                    _show_admin_exception(error, "刪除議程")
+                    success = False
+
+                if success:
+                    st.session_state.admin_feedback = (
+                        "success",
+                        f"✅ 已刪除議程：{session.title}"
+                    )
+                else:
+                    if "admin_feedback" not in st.session_state:
+                        st.session_state.admin_feedback = (
+                            "error",
+                            "❌ 刪除失敗，請稍後再試"
+                        )
+
+                st.session_state.admin_action = None
+                st.session_state.pop("delete_session_id", None)
+                st.rerun()
+
+        with cancel_col:
+            if st.button("❌ 取消", use_container_width=True, key=f"cancel_delete_{session_id}"):
+                st.session_state.admin_action = None
+                st.session_state.pop("delete_session_id", None)
+                st.rerun()
+
+        st.markdown("</div>", unsafe_allow_html=True)

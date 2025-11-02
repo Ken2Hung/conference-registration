@@ -173,9 +173,31 @@ All data modifications use atomic operations:
 
 This ensures data integrity even with concurrent access.
 
+## Browser Compatibility
+
+### Real-time Transcription Feature (003)
+**Supported Browsers**:
+- ✅ **Chrome / Microsoft Edge** (Recommended) - Full WebRTC support
+- ✅ **Firefox** - Good WebRTC support
+- ⚠️ **Safari** - Limited WebRTC support, may experience ICE connection failures
+
+**Known Issues**:
+- Safari users may see `ICE: N/A` or connection failures with streamlit-webrtc
+- Safari's WebRTC implementation is less stable for audio streaming
+- **Recommendation**: Use Chrome or Edge for the transcription feature
+
+**Technical Details**:
+- WebRTC requires HTTPS (or localhost) for microphone access
+- STUN servers: Google (stun.l.google.com), Cloudflare (stun.cloudflare.com)
+- Audio constraints: 48kHz sample rate, mono channel, PCM format
+
 ## Active Technologies
 - Python 3.9.6 + Streamlit 1.28.0, Pillow 10.1.0 (002-speaker-image-rendering)
 - Local file system (speaker photos in `images/` directory) (002-speaker-image-rendering)
+- Python 3.9.6 + Streamlit 1.28.0, python-dateutil 2.8.2, Pillow 10.1.0 (001-registration-enhancement)
+- JSON files in `data/` directory with atomic write operations and file locking (001-registration-enhancement)
+- Python 3.9.6 + Streamlit 1.28.0, streamlit-webrtc, OpenAI Python SDK, PyAV, NumPy, python-dotenv (003-realtime-mic-transcription)
+- Local filesystem (`resource/` directory for transcript files) (003-realtime-mic-transcription)
 
 ## Recent Changes
 - 002-speaker-image-rendering: Added Python 3.9.6 + Streamlit 1.28.0, Pillow 10.1.0

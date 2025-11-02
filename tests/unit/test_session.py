@@ -3,6 +3,7 @@ import pytest
 from datetime import datetime
 from src.models.session import Session
 from src.models.speaker import Speaker
+from src.models.registrant import Registrant
 
 
 @pytest.fixture
@@ -29,8 +30,9 @@ def sample_session(sample_speaker):
         tags=["Python", "Web Scraping"],
         learning_outcomes="掌握 Requests 與 BeautifulSoup 用法",
         capacity=50,
-        registered=25,
-        speaker=sample_speaker
+        registered=0,
+        speaker=sample_speaker,
+        registrants=[]
     )
 
 
@@ -48,8 +50,9 @@ def past_session(sample_speaker):
         tags=["Test"],
         learning_outcomes="測試過去議程",
         capacity=100,
-        registered=80,
-        speaker=sample_speaker
+        registered=0,
+        speaker=sample_speaker,
+        registrants=[]
     )
 
 
@@ -61,7 +64,7 @@ class TestSessionValidation:
         assert sample_session.id == "session_001"
         assert sample_session.title == "Python 網頁爬蟲入門"
         assert sample_session.capacity == 50
-        assert sample_session.registered == 25
+        assert sample_session.registered == 0
 
     def test_empty_id_raises_error(self, sample_speaker):
         """Test that empty ID raises ValueError."""
@@ -269,3 +272,126 @@ class TestSessionProperties:
         )
         session.capacity = 0
         assert session.registration_percentage() == 0.0
+
+
+class TestSessionEnhancements:
+    """Test enhanced Session model methods for registration."""
+
+    def test_registrants_consistency_validation(self, sample_speaker):
+        """Test that registrants count must match registered count."""
+        with pytest.raises(ValueError, match="Registrants count .* must match registered count"):
+            Session(
+                id="session_001",
+                title="Test",
+                description="Test",
+                date="2025-12-01",
+                time="14:00-16:00",
+                location="Test",
+                level="初",
+                tags=["Test"],
+                learning_outcomes="Test",
+                capacity=50,
+                registered=2,
+                speaker=sample_speaker,
+                registrants=[
+                    Registrant(name="張三", registered_at="2025-10-28T14:32:10+08:00")
+                ]
+            )
+
+    def test_can_register_available_session(self, sample_session):
+        """Test can_register returns True for available session."""
+        can_register, message = sample_session.can_register("新報名者")
+        assert can_register is True
+        assert message == ""
+
+    def test_can_register_duplicate_name(self, sample_session):
+        """Test can_register rejects duplicate name."""
+        sample_session.registrants = [
+            Registrant(name="張三", registered_at="2025-10-28T14:32:10+08:00")
+        ]
+        sample_session.registered = 1
+
+        can_register, message = sample_session.can_register("張三")
+        assert can_register is False
+        assert message == "您已報名"
+
+    def test_can_register_duplicate_case_insensitive(self, sample_session):
+        """Test can_register rejects duplicate name (case-insensitive)."""
+        sample_session.registrants = [
+            Registrant(name="John Doe", registered_at="2025-10-28T14:32:10+08:00")
+        ]
+        sample_session.registered = 1
+
+        can_register, message = sample_session.can_register("JOHN DOE")
+        assert can_register is False
+        assert message == "您已報名"
+
+    def test_can_register_duplicate_with_whitespace(self, sample_session):
+        """Test can_register rejects duplicate name with extra whitespace."""
+        sample_session.registrants = [
+            Registrant(name="張三", registered_at="2025-10-28T14:32:10+08:00")
+        ]
+        sample_session.registered = 1
+
+        can_register, message = sample_session.can_register("  張三  ")
+        assert can_register is False
+        assert message == "您已報名"
+
+    def test_can_register_full_session(self, sample_session):
+        """Test can_register rejects when session is full."""
+        sample_session.registered = sample_session.capacity
+        sample_session.registrants = []
+
+        can_register, message = sample_session.can_register("新報名者")
+        assert can_register is False
+        assert message == "已額滿"
+
+    def test_can_register_past_session(self, past_session):
+        """Test can_register rejects when session has passed."""
+        can_register, message = past_session.can_register("新報名者")
+        assert can_register is False
+        assert message == "已過期"
+
+    def test_add_registrant(self, sample_session):
+        """Test add_registrant adds to list and syncs count."""
+        initial_count = sample_session.registered
+        registrant = Registrant(name="張三", registered_at="2025-10-28T14:32:10+08:00")
+
+        sample_session.add_registrant(registrant)
+
+        assert len(sample_session.registrants) == initial_count + 1
+        assert sample_session.registered == initial_count + 1
+        assert sample_session.registrants[-1].name == "張三"
+
+    def test_add_multiple_registrants(self, sample_session):
+        """Test adding multiple registrants."""
+        registrant1 = Registrant(name="張三", registered_at="2025-10-28T14:32:10+08:00")
+        registrant2 = Registrant(name="李四", registered_at="2025-10-28T14:35:22+08:00")
+
+        sample_session.add_registrant(registrant1)
+        sample_session.add_registrant(registrant2)
+
+        assert len(sample_session.registrants) == 2
+        assert sample_session.registered == 2
+
+    def test_get_registrants_names(self, sample_session):
+        """Test get_registrants_names returns list of names."""
+        sample_session.registrants = [
+            Registrant(name="張三", registered_at="2025-10-28T14:32:10+08:00"),
+            Registrant(name="李四", registered_at="2025-10-28T14:35:22+08:00"),
+            Registrant(name="王五", registered_at="2025-10-28T15:01:05+08:00")
+        ]
+        sample_session.registered = 3
+
+        names = sample_session.get_registrants_names()
+
+        assert names == ["張三", "李四", "王五"]
+
+    def test_get_registrants_names_empty(self, sample_session):
+        """Test get_registrants_names returns empty list when no registrants."""
+        sample_session.registrants = []
+        sample_session.registered = 0
+
+        names = sample_session.get_registrants_names()
+
+        assert names == []

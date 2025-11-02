@@ -3,6 +3,7 @@ import os
 from typing import List, Optional, Dict, Any, Tuple
 from src.models.session import Session
 from src.models.speaker import Speaker
+from src.models.registrant import Registrant
 from src.services.storage_service import load_json, save_json, lock_file
 from src.utils.exceptions import SessionNotFoundError
 from src.utils.validation import validate_session
@@ -47,6 +48,16 @@ def get_all_sessions() -> List[Session]:
             bio=speaker_data["bio"]
         )
 
+        # Parse registrants (defaults to empty list for backward compatibility)
+        registrants_data = session_data.get("registrants", [])
+        registrants = [
+            Registrant(
+                name=reg["name"],
+                registered_at=reg["registered_at"]
+            )
+            for reg in registrants_data
+        ]
+
         session = Session(
             id=session_data["id"],
             title=session_data["title"],
@@ -59,7 +70,8 @@ def get_all_sessions() -> List[Session]:
             learning_outcomes=session_data["learning_outcomes"],
             capacity=session_data["capacity"],
             registered=session_data["registered"],
-            speaker=speaker
+            speaker=speaker,
+            registrants=registrants
         )
 
         sessions.append(session)
@@ -306,3 +318,20 @@ def delete_session(session_id: str) -> bool:
     _clear_cache()
 
     return True
+
+def get_session_registrants(session_id: str) -> List[Registrant]:
+    """
+    Get list of registrants for a session.
+
+    Args:
+        session_id: Session identifier
+
+    Returns:
+        List of Registrant objects (ordered by registration time)
+        Empty list if session not found or has no registrants
+    """
+    session = get_session_by_id(session_id)
+    if session is None:
+        return []
+
+    return session.registrants

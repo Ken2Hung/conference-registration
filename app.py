@@ -2,9 +2,16 @@
 議程管理系統主應用程式
 Conference Session Management System
 """
+import logging
 import streamlit as st
+
 from src.ui.dashboard import render_dashboard
 from src.ui.session_detail import render_session_detail
+from src.ui.admin_panel import render_admin_panel
+from src.ui.transcription_page import render_transcription_page
+from src.ui.mic_recorder_page import render_mic_recorder_page
+
+logger = logging.getLogger(__name__)
 
 
 # Streamlit 頁面配置
@@ -26,6 +33,16 @@ def initialize_session_state():
 
     if "selected_session_id" not in st.session_state:
         st.session_state.selected_session_id = None
+        
+    # 確保 admin 相關狀態存在
+    if "admin_authenticated" not in st.session_state:
+        st.session_state.admin_authenticated = False
+        
+    if "admin_action" not in st.session_state:
+        st.session_state.admin_action = None
+        
+    if "edit_session_id" not in st.session_state:
+        st.session_state.edit_session_id = None
 
 
 def apply_custom_css():
@@ -155,17 +172,25 @@ def render_navigation():
     """渲染導航選單。"""
     st.markdown("<div style='margin-bottom: 24px;'></div>", unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns([1, 6, 1])
+    # 使用更簡單的佈局避免 columns 問題
+    nav_col1, nav_col2, nav_col3, nav_col4 = st.columns([1, 1, 1.4, 1], gap="small")
 
-    with col1:
-        if st.button("🏠 首頁", use_container_width=True):
+    with nav_col1:
+        if st.button("🏠 首頁", use_container_width=True, key="nav_home"):
             st.session_state.current_page = "dashboard"
             st.session_state.selected_session_id = None
-            st.rerun()
 
-    with col3:
-        if st.button("👤 管理員", use_container_width=True):
-            st.info("管理員功能將在後續版本提供")
+    with nav_col2:
+        if st.button("🎤 轉錄", use_container_width=True, key="nav_transcription"):
+            st.session_state.current_page = "transcription"
+
+    with nav_col3:
+        if st.button("🎧 錄音測試", use_container_width=True, key="nav_mic_recorder"):
+            st.session_state.current_page = "mic_capture"
+
+    with nav_col4:
+        if st.button("👤 管理員", use_container_width=True, key="nav_admin"):
+            st.session_state.current_page = "admin"
 
 
 def render_current_page():
@@ -185,6 +210,18 @@ def render_current_page():
                     st.session_state.current_page = "dashboard"
                     st.rerun()
 
+        elif st.session_state.current_page == "admin":
+            # 渲染管理員面板
+            render_admin_panel()
+
+        elif st.session_state.current_page == "transcription":
+            # 渲染即時轉錄頁面
+            render_transcription_page()
+
+        elif st.session_state.current_page == "mic_capture":
+            # 渲染麥克風錄音頁
+            render_mic_recorder_page()
+
         else:
             # 未知頁面
             st.error(f"未知的頁面：{st.session_state.current_page}")
@@ -194,6 +231,7 @@ def render_current_page():
 
     except Exception as e:
         # 錯誤邊界
+        logger.exception("Unhandled exception while rendering page")
         st.error("發生錯誤，請稍後再試")
 
         with st.expander("🔍 錯誤詳情"):
@@ -207,17 +245,25 @@ def render_current_page():
 
 def main():
     """主應用程式入口。"""
-    # 初始化
-    initialize_session_state()
+    try:
+        # 初始化
+        initialize_session_state()
 
-    # 套用樣式
-    apply_custom_css()
+        # 套用樣式
+        apply_custom_css()
 
-    # 渲染導航
-    render_navigation()
-
-    # 渲染當前頁面
-    render_current_page()
+        # 渲染導航與頁面 (避免在同一回合內同時重繪導致遞迴)
+        render_navigation()
+        render_current_page()
+    except Exception as e:
+        logger.exception("Unhandled exception during app execution")
+        st.error("應用程式發生錯誤，請重新整理頁面")
+        st.code(str(e))
+        
+        # 嘗試重置狀態
+        if st.button("🔄 重新整理"):
+            st.session_state.clear()
+            st.rerun()
 
     # 頁尾資訊
     st.markdown("""

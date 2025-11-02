@@ -1,8 +1,8 @@
 """Session data model."""
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
-from typing import List
+from typing import List, Tuple
 from src.models.speaker import Speaker
 
 
@@ -22,6 +22,7 @@ class Session:
     capacity: int
     registered: int
     speaker: Speaker
+    registrants: List['Registrant'] = field(default_factory=list)
 
     def __post_init__(self):
         """Validate session data after initialization."""
@@ -48,6 +49,13 @@ class Session:
 
         if self.registered > self.capacity:
             raise ValueError(f"Registered count ({self.registered}) cannot exceed capacity ({self.capacity})")
+
+        # Validate registrants consistency
+        if len(self.registrants) != self.registered:
+            raise ValueError(
+                f"Registrants count ({len(self.registrants)}) must match "
+                f"registered count ({self.registered})"
+            )
 
     def is_full(self) -> bool:
         """Check if session is at capacity."""
@@ -88,3 +96,51 @@ class Session:
         if self.capacity == 0:
             return 0.0
         return (self.registered / self.capacity) * 100.0
+
+    def can_register(self, name: str) -> Tuple[bool, str]:
+        """
+        Check if name can register.
+
+        Args:
+            name: Attendee name to check
+
+        Returns:
+            Tuple of (can_register: bool, error_message: str)
+            - (True, "") if registration allowed
+            - (False, "已額滿") if session is full
+            - (False, "已過期") if session has passed
+            - (False, "您已報名") if name is duplicate
+        """
+        from src.utils.validation import normalize_name
+
+        if self.is_full():
+            return False, "已額滿"
+        if self.is_past():
+            return False, "已過期"
+
+        # Check duplicate using normalized comparison
+        normalized = normalize_name(name)
+        for reg in self.registrants:
+            if normalize_name(reg.name) == normalized:
+                return False, "您已報名"
+
+        return True, ""
+
+    def add_registrant(self, registrant: 'Registrant') -> None:
+        """
+        Add registrant and sync registered count.
+
+        Args:
+            registrant: Registrant object to add
+        """
+        self.registrants.append(registrant)
+        self.registered = len(self.registrants)
+
+    def get_registrants_names(self) -> List[str]:
+        """
+        Get list of registrant names in chronological order.
+
+        Returns:
+            List of names (ordered by registration time)
+        """
+        return [r.name for r in self.registrants]

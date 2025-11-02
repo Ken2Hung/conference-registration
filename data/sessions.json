@@ -16,59 +16,18 @@
       ],
       "learning_outcomes": "學會如何建構 LLM 安全防護、了解常見 AI 應用風險、掌握 Guardrails.ai 實作技巧",
       "capacity": 100,
-      "registered": 100,
+      "registered": 1,
       "speaker": {
         "name": "Nero Un 阮智軒",
         "photo": "images/speakers/nero-un.jpg",
         "bio": "來自澳門的開發者,現職 IBM 顧問。專注於 AI 安全與企業級應用開發,曾協助多家企業導入 LLM 解決方案。"
-      }
-    },
-    {
-      "id": "session_002",
-      "title": "Python 網頁爬蟲入門:從 Requests 到 Selenium",
-      "description": "網頁爬蟲是數據收集的重要技能。本課程從基礎的 Requests 庫開始,逐步進階到 Selenium 自動化,教你如何爬取靜態與動態網頁,並處理反爬蟲機制。",
-      "date": "2025-09-15",
-      "time": "10:00-12:00",
-      "location": "台北國際會議中心 201 室",
-      "level": "初",
-      "tags": [
-        "Python",
-        "Web Scraping",
-        "Selenium",
-        "Requests"
-      ],
-      "learning_outcomes": "掌握 Requests 與 BeautifulSoup 用法、學會使用 Selenium 處理動態網頁、了解反爬蟲應對策略",
-      "capacity": 70,
-      "registered": 65,
-      "speaker": {
-        "name": "張志成",
-        "photo": "images/speakers/zhang-zhicheng.jpg",
-        "bio": "資深全端工程師,擅長 Python 與 React 開發,專注於 Web 爬蟲與自動化測試領域。曾在多家科技公司擔任技術主管,擁有 10 年以上開發經驗。"
-      }
-    },
-    {
-      "id": "session_003",
-      "title": "React 前端開發最佳實踐",
-      "description": "深入 React 生態系,學習 Hooks、狀態管理、性能優化等進階主題。課程包含 Redux Toolkit、React Query、Testing Library 等現代工具鏈。",
-      "date": "2025-10-20",
-      "time": "14:00-17:00",
-      "location": "線上 Google Meet",
-      "level": "中",
-      "tags": [
-        "React",
-        "JavaScript",
-        "Frontend",
-        "Hooks",
-        "Redux"
-      ],
-      "learning_outcomes": "精通 React Hooks 設計模式、掌握 Redux Toolkit 狀態管理、學會性能優化技巧",
-      "capacity": 80,
-      "registered": 72,
-      "speaker": {
-        "name": "李欣怡",
-        "photo": "images/speakers/li-xinyi.jpg",
-        "bio": "前端技術專家,React 核心貢獻者。曾在 Facebook 和 Airbnb 工作,專注於大規模前端應用架構設計。熱衷於分享前端最佳實踐。"
-      }
+      },
+      "registrants": [
+        {
+          "name": "ken",
+          "registered_at": "2025-10-29T00:05:08.151289+08:00"
+        }
+      ]
     },
     {
       "id": "session_004",
@@ -86,12 +45,13 @@
       ],
       "learning_outcomes": "理解 K8s 架構、掌握資源配置、學會故障排查、實現自動擴展",
       "capacity": 50,
-      "registered": 12,
+      "registered": 0,
       "speaker": {
         "name": "王大明",
         "photo": "images/speakers/wang-daming.jpg",
         "bio": "雲端架構師,擁有 CKA 和 CKAD 認證。曾協助多家企業完成雲原生轉型,專注於 Kubernetes 生產環境最佳實踐。"
-      }
+      },
+      "registrants": []
     },
     {
       "id": "session_005",
@@ -109,12 +69,13 @@
       ],
       "learning_outcomes": "掌握 TensorFlow 基礎、了解神經網絡原理、實作圖像分類模型",
       "capacity": 100,
-      "registered": 100,
+      "registered": 0,
       "speaker": {
         "name": "陳小華",
         "photo": "images/speakers/chen-xiaohua.jpg",
         "bio": "AI 研究員,專注於計算機視覺領域。擁有多篇頂級會議論文發表,熱衷於推廣深度學習技術。"
-      }
+      },
+      "registrants": []
     },
     {
       "id": "session_006",
@@ -132,12 +93,13 @@
       ],
       "learning_outcomes": "理解 AWS 服務體系、掌握架構設計原則、學會成本優化策略",
       "capacity": 60,
-      "registered": 45,
+      "registered": 0,
       "speaker": {
         "name": "林雅婷",
         "photo": "images/speakers/lin-yating.jpg",
         "bio": "AWS 認證解決方案架構師,擁有豐富的雲端遷移經驗。曾協助多家企業完成上雲轉型。"
-      }
+      },
+      "registrants": []
     },
     {
       "id": "session_007",
@@ -154,12 +116,13 @@
       ],
       "learning_outcomes": "掌握敏捷原則、學會 Sprint 規劃、了解團隊協作方法",
       "capacity": 40,
-      "registered": 38,
+      "registered": 0,
       "speaker": {
         "name": "黃建國",
         "photo": "images/speakers/huang-jianguo.jpg",
         "bio": "敏捷教練,CSM 認證 Scrum Master。在多家科技公司推動敏捷轉型,擁有豐富的實戰經驗。"
-      }
+      },
+      "registrants": []
     },
     {
       "id": "session_008",
@@ -176,12 +139,13 @@
       ],
       "learning_outcomes": "熟練使用 Git 命令、掌握分支策略、學會 Pull Request 流程",
       "capacity": 80,
-      "registered": 76,
+      "registered": 0,
       "speaker": {
         "name": "周志明",
         "photo": "images/speakers/zhou-zhiming.jpg",
         "bio": "開源社群活躍貢獻者,GitHub Star 超過 10k。長期推廣版本控制最佳實踐,曾在多個技術社群分享。"
-      }
+      },
+      "registrants": []
     },
     {
       "id": "session_009",
@@ -199,12 +163,13 @@
       ],
       "learning_outcomes": "掌握數據處理技巧、學會數據可視化、了解統計分析方法",
       "capacity": 90,
-      "registered": 90,
+      "registered": 0,
       "speaker": {
         "name": "劉芳儀",
         "photo": "images/speakers/liu-fangyi.jpg",
         "bio": "數據科學家,專注於商業分析領域。曾在金融和電商行業處理大規模數據,熱愛教學與分享。"
-      }
+      },
+      "registrants": []
     },
     {
       "id": "session_010",
@@ -221,12 +186,13 @@
       ],
       "learning_outcomes": "理解容器化原理、掌握 Docker 命令、學會編寫 Dockerfile",
       "capacity": 70,
-      "registered": 35,
+      "registered": 0,
       "speaker": {
         "name": "吳承恩",
         "photo": "images/speakers/wu-chengen.jpg",
         "bio": "DevOps 工程師,Docker 認證專家。在多個項目中實踐容器化部署,擅長 CI/CD 流程優化。"
-      }
+      },
+      "registrants": []
     },
     {
       "id": "session_011",
@@ -244,11 +210,53 @@
       ],
       "learning_outcomes": "掌握 Airflow 架構、學會編寫 DAG、了解最佳實踐",
       "capacity": 40,
-      "registered": 18,
+      "registered": 0,
       "speaker": {
         "name": "鄭明哲",
         "photo": "images/speakers/zheng-mingzhe.jpg",
         "bio": "數據工程師,在大數據平台建設方面有豐富經驗。曾負責多個企業級數據管道的設計和實現。"
+      },
+      "registrants": []
+    },
+    {
+      "id": "session_012",
+      "registered": 0,
+      "title": "test",
+      "description": "test",
+      "date": "2025-10-29",
+      "time": "16:00-18:00",
+      "location": "503",
+      "level": "初",
+      "tags": [
+        "ai",
+        "cli"
+      ],
+      "learning_outcomes": "tet",
+      "capacity": 20,
+      "speaker": {
+        "name": "ken",
+        "photo": "resource/speaker-photo/ken_1761701540.png",
+        "bio": "test"
+      }
+    },
+    {
+      "id": "session_013",
+      "registered": 0,
+      "title": "test",
+      "description": "ttt",
+      "date": "2025-10-29",
+      "time": "TBD",
+      "location": "ttt",
+      "level": "初",
+      "tags": [
+        "tt"
+      ],
+      "learning_outcomes": "ttt",
+      "capacity": 50,
+      "speaker": {
+        "name": "ttt",
+        "photo": "resource/speaker-photo/ttt_1761704117.png",
+        "bio": "ttt"
       }
     }
   ]

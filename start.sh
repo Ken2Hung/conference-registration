@@ -46,5 +46,5 @@ echo ""
 echo "💡 提示: 按 Ctrl+C 可停止伺服器"
 echo ""
 
-# 啟動 Streamlit
-streamlit run app.py
+# 啟動 Streamlit（輸出詳細日誌）
+streamlit run app.py --logger.level=debug

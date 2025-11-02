@@ -1,4 +1,6 @@
 """Dashboard UI component for displaying sessions."""
+from datetime import datetime
+from datetime import datetime
 from itertools import islice
 from typing import Iterable, List, Optional
 
@@ -43,6 +45,35 @@ def _chunk(items: Iterable[Session], size: int) -> Iterable[List[Session]]:
         yield batch
 
 
+def _session_sort_key(session: Session) -> tuple:
+    """Return sorting key for sessions (date desc, TBD next, expired last)."""
+    status = session.status()
+    is_expired = status == "expired"
+
+    time_str = (session.time or "").strip()
+    is_tbd = time_str.upper() == "TBD"
+
+    try:
+        if not is_tbd:
+            start_part = time_str.split("-")[0].strip()
+            dt = datetime.strptime(f"{session.date} {start_part}", "%Y-%m-%d %H:%M")
+        else:
+            dt = datetime.strptime(f"{session.date} 00:00", "%Y-%m-%d %H:%M")
+    except Exception:
+        dt = datetime.strptime(f"{session.date} 00:00", "%Y-%m-%d %H:%M")
+
+    # Primary: expired sessions last
+    primary = 1 if is_expired else 0
+
+    # Secondary: within active sessions, those with actual time before TBD
+    secondary = 1 if (not is_expired and is_tbd) else 0
+
+    # Tertiary: newer dates first (descending)
+    tertiary = -dt.timestamp()
+
+    return (primary, secondary, tertiary)
+
+
 def _session_card_html(session: Session, selected_tag: Optional[str] = None) -> str:
     """產生議程卡片的 HTML。"""
     level_style = LEVEL_STYLES.get(
@@ -71,11 +102,12 @@ def _session_card_html(session: Session, selected_tag: Optional[str] = None) -> 
                 <span>{session.level}</span>
             </div>
             <div class="session-card__meta">
-                <span>{session.date}</span>
-                <span>{session.time}</span>
-                <span>{session.location}</span>
+                <div class="session-card__meta-line">{session.date} · {session.time}</div>
+                <div class="session-card__meta-location">{session.location}</div>
             </div>
-            <h3 class="session-card__title">{session.title}</h3>
+            <div class="session-card__title-wrapper">
+                <h3 class="session-card__title">{session.title}</h3>
+            </div>
             <div class="session-card__speaker">
                 <div class="session-card__speaker-name">{session.speaker.name}</div>
                 <div class="session-card__speaker-level">{level_style['label']}</div>
@@ -196,37 +228,10 @@ def _inject_dashboard_styles():
                 transform: translateY(-3px);
                 box-shadow: 0 24px 45px 0 rgba(168, 85, 247, 0.28);
             }
-            .session-card-wrapper > div[data-testid="stButton"] {
-                position: absolute;
-                inset: 0;
-                border-radius: 20px;
-                margin: 0 !important;
-                padding: 0 !important;
-                background: transparent !important;
-                box-shadow: none !important;
-            }
-            .session-card-wrapper > div[data-testid="stButton"] button {
-                position: absolute;
-                inset: 0;
-                width: 100%;
-                height: 100%;
-                opacity: 0;
-                cursor: pointer;
-                border-radius: 20px;
-                background: transparent !important;
-                border: none !important;
-                box-shadow: none !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                color: transparent !important;
-            }
-            .session-card-wrapper > div[data-testid="stButton"] button:focus-visible {
-                outline: 2px solid #a855f7;
-            }
             .session-card {
                 background: rgba(15, 17, 40, 0.92);
                 border-radius: 20px;
-                padding: 22px;
+                padding: 22px 22px 26px;
                 position: relative;
                 min-height: 280px;
                 display: flex;
@@ -235,7 +240,6 @@ def _inject_dashboard_styles():
                 border: 1px solid rgba(148, 163, 184, 0.18);
                 width: 100%;
                 transition: transform 0.2s ease, box-shadow 0.2s ease;
-                cursor: pointer;
             }
             .session-card:focus-visible {
                 outline: 2px solid #a855f7;
@@ -244,29 +248,91 @@ def _inject_dashboard_styles():
                 position: absolute;
                 top: -12px;
                 left: 22px;
-                padding: 8px 14px;
-                border-radius: 0 0 12px 12px;
+                padding: 6px 12px;
+                border-radius: 10px;
                 font-weight: 700;
+                font-size: 12px;
                 letter-spacing: 0.08em;
                 color: #161030;
                 text-transform: uppercase;
-                box-shadow: 0 12px 30px rgba(15,17,40,0.65);
+                box-shadow: 0 10px 18px rgba(15, 17, 40, 0.55);
+                z-index: 5;
+            }
+            .session-card__cta {
+                position: absolute;
+                top: 18px;
+                right: 18px;
+                width: 36px;
+                height: 36px;
+                border-radius: 12px;
+                background: rgba(148, 163, 184, 0.14);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #f8fafc;
+                font-size: 18px;
+                font-weight: 600;
+                letter-spacing: 0.04em;
+                transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
+            }
+            .session-card-wrapper:hover .session-card__cta {
+                background: linear-gradient(135deg, #ec4899 0%, #a855f7 100%);
+                color: #141020;
+                transform: scale(1.08);
+            }
+            .session-card-wrapper > div[data-testid="stButton"] {
+                position: absolute;
+                inset: 0;
+                border-radius: 20px;
+                z-index: 15;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: transparent !important;
+                box-shadow: none !important;
+            }
+            .session-card-wrapper > div[data-testid="stButton"] > button {
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+                opacity: 0;
+                cursor: pointer !important;
+                border-radius: 20px !important;
+                background: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                color: transparent !important;
+            }
+            .session-card-wrapper > div[data-testid="stButton"] > button:focus-visible {
+                outline: 2px solid #a855f7 !important;
+                outline-offset: 2px !important;
             }
             .session-card__meta {
                 display: flex;
-                gap: 10px;
+                flex-direction: column;
+                align-items: flex-end;
+                gap: 4px;
+                margin-top: 34px;
+            }
+            .session-card__meta-line {
                 color: #cbd5f5;
                 font-size: 13px;
-                justify-content: flex-end;
+                letter-spacing: 0.03em;
+                white-space: nowrap;
             }
-            .session-card__meta span::before {
-                content: "•";
-                margin-right: 6px;
-                color: rgba(148, 163, 184, 0.4);
+            .session-card__meta-location {
+                color: rgba(148, 163, 184, 0.85);
+                font-size: 12px;
+                letter-spacing: 0.04em;
+                white-space: nowrap;
             }
-            .session-card__meta span:first-child::before {
-                content: "";
-                margin: 0;
+            .session-card__title-wrapper {
+                display: flex;
+                align-items: flex-start;
+                gap: 12px;
+                min-height: 65px;
             }
             .session-card__title {
                 margin: 0;
@@ -274,7 +340,7 @@ def _inject_dashboard_styles():
                 font-weight: 700;
                 color: #f8fafc;
                 line-height: 1.4;
-                min-height: 65px;
+                flex: 1;
             }
             .session-card__speaker {
                 display: flex;
@@ -354,6 +420,8 @@ def render_dashboard():
         st.error(f"載入議程時發生錯誤: {exc}")
         return
 
+    sessions = sorted(sessions, key=_session_sort_key)
+
     if not sessions:
         st.info("目前尚未建立任何議程。")
         return
@@ -405,7 +473,7 @@ def render_dashboard():
 
     if len(categories) > max_visible:
         toggle_label = "收合" if show_all else "..."
-        toggle_cols = st.columns([1, 0.2, 1])
+        toggle_cols = st.columns([1, 0.2, 1], gap="small")
         with toggle_cols[1]:
             st.markdown("<div class='dashboard-tags__toggle'>", unsafe_allow_html=True)
             if st.button(toggle_label, key="dashboard_tags_toggle"):
@@ -418,6 +486,7 @@ def render_dashboard():
         highlight_tag = None
     else:
         filtered_sessions = [s for s in sessions if selected_category in s.tags]
+        filtered_sessions.sort(key=_session_sort_key)
         highlight_tag = selected_category
 
     if not filtered_sessions:
@@ -437,10 +506,7 @@ def render_dashboard():
                     _session_card_html(session, selected_tag=highlight_tag),
                     unsafe_allow_html=True,
                 )
-                if card_container.button(
-                    "",
-                    key=f"card_click_{session.id}",
-                ):
+                if card_container.button("查看詳情", key=f"card_click_{session.id}"):
                     st.session_state.selected_session_id = session.id
                     st.session_state.current_page = "detail"
                     st.rerun()

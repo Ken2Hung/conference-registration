@@ -1,9 +1,13 @@
 """Session detail page UI component styled to match the dashboard."""
 
+from datetime import datetime, timedelta
+
 import streamlit as st
 
 from src.models.session import Session
-from src.services.session_service import get_session_by_id, register_for_session
+from src.services.session_service import get_session_by_id
+from src.services.registration_service import register_for_session, remove_registrant
+from src.services.admin_service import login_admin, is_admin_authenticated, logout_admin
 from src.ui.html_utils import html_block
 
 LEVEL_STYLES = {
@@ -192,6 +196,57 @@ def _inject_detail_styles():
                 background: linear-gradient(135deg, #ec4899 0%, #a855f7 100%) !important;
                 color: #18122b !important;
             }
+            .registrants-list {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                max-height: 400px;
+                overflow-y: auto;
+                padding: 4px;
+            }
+            .registrant-item {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 10px 14px;
+                background: rgba(99, 102, 241, 0.08);
+                border-radius: 12px;
+                border: 1px solid rgba(99, 102, 241, 0.15);
+                transition: all 0.2s ease;
+            }
+            .registrant-item:hover {
+                background: rgba(99, 102, 241, 0.12);
+                border-color: rgba(99, 102, 241, 0.25);
+            }
+            .registrant-number {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, #ec4899 0%, #a855f7 100%);
+                color: #18122b;
+                font-size: 13px;
+                font-weight: 700;
+                flex-shrink: 0;
+            }
+            .registrant-name {
+                color: #f8fafc;
+                font-size: 14px;
+                font-weight: 500;
+                letter-spacing: 0.02em;
+            }
+            .registrants-empty {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                padding: 32px 16px;
+                color: rgba(148, 163, 184, 0.6);
+                text-align: center;
+                font-size: 14px;
+            }
             </style>
             """
         ),
@@ -290,6 +345,105 @@ def _detail_registration_html(session: Session) -> str:
     )
 
 
+def _detail_registrants_html(session: Session) -> str:
+    """Return registrants list HTML."""
+    registrants = session.registrants
+
+    if not registrants:
+        empty_message = """
+        <div class="registrants-empty">
+            <div style="font-size: 32px; margin-bottom: 8px;">👥</div>
+            <div>目前尚無報名者</div>
+        </div>
+        """
+        return html_block(
+            f"""
+            <div class="detail-section">
+                <h4>報名名單 ({len(registrants)} 人)</h4>
+                {empty_message}
+            </div>
+            """
+        )
+
+    # Build registrants list HTML
+    registrants_items = []
+    for idx, registrant in enumerate(registrants, 1):
+        registrants_items.append(
+            f"""
+            <div class="registrant-item">
+                <div class="registrant-number">{idx}</div>
+                <div class="registrant-name">{registrant.name}</div>
+            </div>
+            """
+        )
+
+    registrants_html = "".join(registrants_items)
+
+    return html_block(
+        f"""
+        <div class="detail-section">
+            <h4>報名名單 ({len(registrants)} 人)</h4>
+            <div class="registrants-list">
+                {registrants_html}
+            </div>
+        </div>
+        """
+    )
+
+
+def _render_admin_registrant_controls(session: Session) -> None:
+    """Render admin-only registrant management tools."""
+    admin_box = st.expander("🔐 管理者報名管理", expanded=False)
+
+    with admin_box:
+        if is_admin_authenticated():
+            st.success("已驗證管理者身份")
+
+            logout_col, _ = st.columns([1, 4])
+            with logout_col:
+                if st.button("🚪 登出管理者", key=f"detail_admin_logout_{session.id}"):
+                    logout_admin()
+                    st.info("已登出管理者")
+                    st.rerun()
+
+            st.markdown("---")
+            st.markdown(f"目前報名人數：{len(session.registrants)} 人")
+
+            if not session.registrants:
+                st.info("尚無報名者可管理")
+                return
+
+            for idx, registrant in enumerate(session.registrants):
+                row_col1, row_col2 = st.columns([4, 1])
+                row_col1.write(f"{idx + 1}. {registrant.name}")
+                with row_col2:
+                    if st.button("刪除", key=f"remove_registrant_{session.id}_{idx}"):
+                        success, message = remove_registrant(session.id, idx)
+                        if success:
+                            st.success(message)
+                            st.rerun()
+                        else:
+                            st.error(message)
+        else:
+            st.info("請輸入管理員帳號以管理報名名單")
+
+            with st.form(f"detail_admin_login_form_{session.id}"):
+                username = st.text_input("管理員帳號", key=f"detail_admin_username_{session.id}")
+                password = st.text_input(
+                    "管理員密碼",
+                    type="password",
+                    key=f"detail_admin_password_{session.id}"
+                )
+                submit = st.form_submit_button("登入")
+
+                if submit:
+                    success, message = login_admin(username, password)
+                    if success:
+                        st.success(message)
+                        st.rerun()
+                    else:
+                        st.error(message)
+
 def render_session_detail(session_id: str):
     """
     Render the session detail page.
@@ -331,6 +485,8 @@ def render_session_detail(session_id: str):
     with main_col:
         st.markdown(_detail_description_html(session), unsafe_allow_html=True)
         st.markdown(_detail_learning_html(session), unsafe_allow_html=True)
+        st.markdown(_detail_registrants_html(session), unsafe_allow_html=True)
+        _render_admin_registrant_controls(session)
 
     with side_col:
         st.markdown(_detail_speaker_html(session), unsafe_allow_html=True)
@@ -338,26 +494,51 @@ def render_session_detail(session_id: str):
 
         status = session.status()
         disabled = status != "available"
-        button_label = {
-            "available": "🎫 立即報名",
-            "full": "🔴 已額滿",
-            "expired": "⏰ 已過期",
-        }.get(status, "🎫 立即報名")
 
         st.markdown("<div class='detail-register'>", unsafe_allow_html=True)
-        if st.button(
-            button_label,
-            key=f"detail_register_{session.id}",
-            use_container_width=True,
-            disabled=disabled,
-        ):
-            success, message = register_for_session(session.id)
-            if success:
-                st.success(message)
-                st.balloons()
-                st.rerun()
-            else:
-                st.error(message)
+
+        # Registration form
+        if status == "available":
+            st.markdown("<h4 style='margin-bottom: 12px; color: #f8fafc;'>報名資訊</h4>", unsafe_allow_html=True)
+            attendee_name = st.text_input(
+                "您的姓名",
+                key=f"name_input_{session.id}",
+                placeholder="請輸入您的姓名（1-50字元）",
+                max_chars=50,
+                help="請輸入您的真實姓名以完成報名"
+            )
+
+            if st.button(
+                "🎫 立即報名",
+                key=f"detail_register_{session.id}",
+                use_container_width=True,
+                disabled=False,
+                type="primary"
+            ):
+                if not attendee_name or not attendee_name.strip():
+                    st.error("❌ 請輸入您的姓名")
+                else:
+                    success, message = register_for_session(session.id, attendee_name)
+                    if success:
+                        st.success(f"✅ {message}")
+                        st.balloons()
+                        st.rerun()
+                    else:
+                        st.error(f"❌ {message}")
+        else:
+            # Show disabled button for non-available sessions
+            button_label = {
+                "full": "🔴 已額滿",
+                "expired": "⏰ 已過期",
+            }.get(status, "已關閉")
+
+            st.button(
+                button_label,
+                key=f"detail_register_{session.id}",
+                use_container_width=True,
+                disabled=True,
+            )
+
         st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("</div></div>", unsafe_allow_html=True)
