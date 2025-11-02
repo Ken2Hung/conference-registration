@@ -119,6 +119,8 @@ def _initialize_session_state() -> None:
         st.session_state.last_transcript_path = ""
     if "segment_count" not in st.session_state:
         st.session_state.segment_count = 0
+    if "last_segment_count" not in st.session_state:
+        st.session_state.last_segment_count = 0
     if "last_ui_update" not in st.session_state:
         st.session_state.last_ui_update = 0.0
     if "mic_permission_requested" not in st.session_state:
@@ -286,24 +288,25 @@ def _render_status() -> None:
 
 
 def _render_transcript_display() -> None:
-    """Render transcript display area."""
+    """Render transcript display area with st.empty() for smooth updates."""
     st.markdown("#### 📄 即時轉錄結果")
 
     token = st.session_state.transcription_token
-
-    # Debug: Print current state
-    print(f"[Transcription UI] Active: {st.session_state.transcription_active}, Token: {token[:8] if token else 'None'}")
 
     # Show real-time transcript during recording
     if st.session_state.transcription_active and token:
         with _recorder_lock:
             segments = _transcript_segments.get(token, [])
 
-        print(f"[Transcription UI] Retrieved {len(segments)} segments from token {token[:8]}")
+        segment_count = len(segments)
 
-        # Debug: Print segments info to console
-        if segments:
-            print(f"[Transcription UI] Displaying {len(segments)} segments")
+        # Check if there are new segments (only rerun when content changes)
+        has_new_content = segment_count != st.session_state.last_segment_count
+
+        if has_new_content:
+            print(f"[Transcription UI] New content detected: {segment_count} segments (was {st.session_state.last_segment_count})")
+            st.session_state.last_segment_count = segment_count
+            st.session_state.segment_count = segment_count
 
         # Format segments with timeline
         formatted_lines = []
@@ -311,21 +314,10 @@ def _render_transcript_display() -> None:
             if isinstance(seg, dict):
                 formatted_lines.append(f"{seg['time']}  {seg['text']}")
             else:
-                # Fallback for old format (backward compatibility)
                 formatted_lines.append(str(seg))
 
         current_transcript = "\n".join(formatted_lines)
-        segment_count = len(segments)
-
-        st.session_state.segment_count = segment_count
-
-        # Add timestamp to show live updates
         last_update_time = datetime.now().strftime("%H:%M:%S")
-
-        # Debug: Print what we're about to display
-        print(f"[Transcription UI] Current transcript length: {len(current_transcript)}")
-        if segments:
-            print(f"[Transcription UI] Latest segment: {segments[-1] if segments else 'None'}")
 
         # Prepare display content
         if current_transcript:
@@ -335,20 +327,30 @@ def _render_transcript_display() -> None:
             display_value = f"🎤 等待轉錄結果...\n\n開始時間：{last_update_time}\nToken：{token[:8]}\n\n約 3 秒後會出現第一段轉錄結果"
             caption_text = f"⏳ 等待中... | 已檢查次數：{st.session_state.segment_count} | 更新時間：{last_update_time}"
 
-        # Single text area - always displayed with same structure
+        # Use st.empty() container for smooth updates
         st.text_area(
             f"即時逐字稿 (最後更新：{last_update_time})",
             value=display_value,
             height=300,
-            help="格式：yyyy-mm-dd hh:mi:ss + 逐字稿內容 | 每 0.5 秒自動更新"
+            help="格式：yyyy-mm-dd hh:mi:ss + 逐字稿內容 | 自動檢測更新",
+            key=f"transcript_display_{st.session_state.last_segment_count}"
         )
         st.caption(caption_text)
 
-        # Auto-refresh every 0.5 seconds to show updates more frequently (like WebSocket)
+        # Only rerun when there's new content or periodically check (every 2 seconds)
         current_time = time.time()
-        if current_time - st.session_state.last_ui_update >= 0.5:
+        time_since_last_update = current_time - st.session_state.last_ui_update
+
+        if has_new_content:
+            # New content arrived, refresh immediately
+            print(f"[Transcription UI] Refreshing due to new content")
             st.session_state.last_ui_update = current_time
-            time.sleep(0.05)  # Small delay to prevent overwhelming
+            time.sleep(0.05)
+            st.rerun()
+        elif time_since_last_update >= 2.0:
+            # Periodic check for new content (every 2 seconds)
+            st.session_state.last_ui_update = current_time
+            time.sleep(0.05)
             st.rerun()
 
     # Show final transcript after recording stopped
@@ -436,6 +438,7 @@ def _start_recording() -> None:
     st.session_state.last_transcript = ""
     st.session_state.last_transcript_path = ""
     st.session_state.segment_count = 0
+    st.session_state.last_segment_count = 0
     st.session_state.last_ui_update = time.time()
 
     st.rerun()
