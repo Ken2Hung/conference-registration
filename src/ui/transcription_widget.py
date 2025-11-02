@@ -26,7 +26,7 @@ from streamlit_autorefresh import st_autorefresh
 from opencc import OpenCC
 from streamlit_webrtc import RTCConfiguration, WebRtcMode, webrtc_streamer
 
-from src.services.audio_service import process_audio_frame
+from src.services.audio_service import process_audio_frame, is_voiced_chunk
 from src.utils.audio_utils import calculate_rms
 
 SAMPLE_RATE = 48000
@@ -36,6 +36,8 @@ AUDIO_GAIN = 2.0  # Volume boost multiplier
 TRANSCRIPTION_CHUNK_DURATION = 3.0  # Seconds between transcription calls
 VAD_RMS_THRESHOLD = 300.0  # Minimum RMS to consider as speech (filter silence)
 TRANSCRIPT_REFRESH_INTERVAL_MS = 1200  # UI polling interval during recording
+VAD_SAMPLE_DENSITY = 0.12  # Minimum proportion of loud samples to treat as speech
+VAD_AMPLITUDE_GATE = 1100  # Sample amplitude gate used by density check
 
 DEFAULT_TITLE = "🎤 即時語音轉錄（Whisper API）"
 DEFAULT_CAPTION = "使用 WebRTC 錄音並透過 Whisper API 背景轉錄為逐字稿"
@@ -704,11 +706,15 @@ def _transcription_worker(token: str) -> None:
                 _last_transcription_time[token] = current_time
 
             chunk_rms = float(calculate_rms(audio_chunk))
-
-            if chunk_rms < VAD_RMS_THRESHOLD:
+            if not is_voiced_chunk(
+                audio_chunk,
+                int(VAD_RMS_THRESHOLD),
+                min_density=VAD_SAMPLE_DENSITY,
+                amplitude_gate=VAD_AMPLITUDE_GATE,
+            ):
                 print(
-                    "[Transcription] Skipping silent chunk "
-                    f"(RMS={chunk_rms:.1f} < {VAD_RMS_THRESHOLD})"
+                    "[Transcription] Skipping non-voiced chunk "
+                    f"(RMS={chunk_rms:.1f}, density<{VAD_SAMPLE_DENSITY})"
                 )
                 continue
 
