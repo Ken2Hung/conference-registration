@@ -3,7 +3,7 @@
     {
       "id": "session_001",
       "title": "MCP V.S Function Calling",
-      "description": "本課程深入比較 MCP（Model Context Protocol）與 Function Calling 的差異，說明其架構、執行方式與語言環境。從早期的使用者提示可用工具機制，到各家廠商制定統一規格的過程，最後引入 MCP 的運作模式與實作方法，幫助開發者理解 MCP 在本地與遠端部署下的運作邏輯與優勢。  <br />課程敘述:<a href=''https://hackmd.io/@XuJU3FwJTIa6ZFRSomsbDg/H18dqY14xg''>https://hackmd.io/@XuJU3FwJTIa6ZFRSomsbDg/H18dqY14xg/a>",
+      "description": "本課程深入比較 MCP（Model Context Protocol）與 Function Calling 的差異，說明其架構、執行方式與語言環境。從早期的使用者提示可用工具機制，到各家廠商制定統一規格的過程，最後引入 MCP 的運作模式與實作方法，幫助開發者理解 MCP 在本地與遠端部署下的運作邏輯與優勢。  <br />課程敘述:<a href=''https://hackmd.io/@XuJU3FwJTIa6ZFRSomsbDg/H18dqY14xg''>https://hackmd.io/@XuJU3FwJTIa6ZFRSomsbDg/H18dqY14xg </a>",
       "date": "2025-10-01",
       "time": "16:00-18:00",
       "location": "立功 2F 會議室",
@@ -45,6 +45,32 @@
         "bio": "洪健儀，2處1部AP1-3課，資深全端工程師，擅長JAVA, Python, SQL、AI Agent 開發相關技術"
       },
       "registrants": []
+    },
+    {
+      "id": "session_003",
+      "registered": 1,
+      "title": "test",
+      "description": "test",
+      "date": "2025-11-21",
+      "time": "13:00-15:45",
+      "location": "test",
+      "level": "初",
+      "tags": [
+        "test"
+      ],
+      "learning_outcomes": "test",
+      "capacity": 10,
+      "speaker": {
+        "name": "Ken2_hung",
+        "photo": "resource/speaker-photo/ken2_hung_1762094682.png",
+        "bio": "test"
+      },
+      "registrants": [
+        {
+          "name": "Ken",
+          "registered_at": "2025-11-02T22:45:09.323322+08:00"
+        }
+      ]
     }
   ]
 }

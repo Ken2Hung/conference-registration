@@ -7,7 +7,8 @@ from typing import Iterable, List, Optional
 import streamlit as st
 
 from src.models.session import Session
-from src.services.session_service import get_all_sessions
+from src.services.session_service import get_all_sessions, get_session_by_id
+from src.services.registration_service import register_for_session
 from src.ui.html_utils import html_block
 
 LEVEL_STYLES = {
@@ -33,6 +34,123 @@ STATUS_CONFIG = {
     "full": {"label": "已額滿", "color": "#f87171"},
     "expired": {"label": "已過期", "color": "#94a3b8"},
 }
+
+DIALOG_DECORATOR = getattr(st, "dialog", None) or getattr(st, "experimental_dialog", None)
+
+REG_DIALOG_FLAG = "dashboard_registration_dialog_open"
+REG_DIALOG_CONTEXT = "dashboard_registration_context"
+REG_DIALOG_FEEDBACK = "dashboard_registration_feedback"
+
+
+def _ensure_registration_state() -> None:
+    """Ensure registration dialog state keys exist."""
+    if REG_DIALOG_FLAG not in st.session_state:
+        st.session_state[REG_DIALOG_FLAG] = False
+    if REG_DIALOG_CONTEXT not in st.session_state:
+        st.session_state[REG_DIALOG_CONTEXT] = None
+
+
+def _registration_name_key(session_id: str) -> str:
+    """Build session-specific key for attendee name input."""
+    return f"dashboard_registration_name_{session_id}"
+
+
+def _open_registration_dialog(session: Session) -> None:
+    """Store context and open registration dialog for a session."""
+    _ensure_registration_state()
+    st.session_state[REG_DIALOG_CONTEXT] = {
+        "id": session.id,
+        "title": session.title,
+    }
+    st.session_state[REG_DIALOG_FLAG] = True
+    st.session_state.pop(_registration_name_key(session.id), None)
+
+
+def _close_registration_dialog() -> None:
+    """Reset dialog state."""
+    context = st.session_state.get(REG_DIALOG_CONTEXT)
+    if context:
+        st.session_state.pop(_registration_name_key(context.get("id", "")), None)
+    st.session_state[REG_DIALOG_FLAG] = False
+    st.session_state[REG_DIALOG_CONTEXT] = None
+
+
+def _render_registration_form(session: Session) -> None:
+    """Render the registration form content."""
+    st.markdown(f"### {session.title}")
+    st.caption(f"{session.date} · {session.time} | {session.location}")
+    st.caption(f"目前報名狀態：{session.registered}/{session.capacity} 人")
+
+    name_key = _registration_name_key(session.id)
+    st.text_input(
+        "您的姓名",
+        key=name_key,
+        placeholder="請輸入您的姓名（1-50字元）",
+        max_chars=50,
+        help="請輸入真實姓名完成報名"
+    )
+
+    action_cols = st.columns(2, gap="small")
+    with action_cols[0]:
+        if st.button("取消", key=f"dashboard_register_cancel_{session.id}", use_container_width=True):
+            _close_registration_dialog()
+            st.rerun()
+
+    with action_cols[1]:
+        if st.button(
+            "確認報名",
+            key=f"dashboard_register_submit_{session.id}",
+            use_container_width=True,
+            type="primary",
+        ):
+            attendee_name = st.session_state.get(name_key, "").strip()
+            if not attendee_name:
+                st.error("❌ 請輸入您的姓名")
+                return
+
+            success, message = register_for_session(session.id, attendee_name)
+            if success:
+                st.session_state[REG_DIALOG_FEEDBACK] = {
+                    "type": "success",
+                    "message": f"🎉 已為 {attendee_name} 報名「{session.title}」",
+                }
+                _close_registration_dialog()
+                st.rerun()
+            else:
+                st.error(f"❌ {message}")
+
+
+def _render_registration_fallback(session: Session) -> None:
+    """Render inline fallback registration section when dialog API unavailable."""
+    st.warning("目前環境不支援彈出視窗，將使用頁面內表單完成報名。")
+    _render_registration_form(session)
+
+
+def _render_registration_dialog() -> None:
+    """Render registration dialog or fallback form depending on Streamlit capabilities."""
+    context = st.session_state.get(REG_DIALOG_CONTEXT)
+    if not context:
+        _close_registration_dialog()
+        return
+
+    session_id = context.get("id")
+    session = get_session_by_id(session_id) if session_id else None
+
+    if session is None:
+        st.error("找不到議程資訊，請稍後再試。")
+        if st.button("關閉", key="dashboard_register_dialog_close_error", use_container_width=True):
+            _close_registration_dialog()
+            st.rerun()
+        return
+
+    if DIALOG_DECORATOR:
+        @DIALOG_DECORATOR("課程報名")
+        def _dialog():
+            _render_registration_form(session)
+
+        _dialog()
+    else:
+        _render_registration_fallback(session)
 
 
 def _chunk(items: Iterable[Session], size: int) -> Iterable[List[Session]]:
@@ -422,6 +540,19 @@ def render_dashboard():
 
     sessions = sorted(sessions, key=_session_sort_key)
 
+    _ensure_registration_state()
+
+    feedback = st.session_state.pop(REG_DIALOG_FEEDBACK, None)
+    if feedback:
+        level = feedback.get("type")
+        message = feedback.get("message", "")
+        if level == "success":
+            st.success(message)
+        elif level == "error":
+            st.error(message)
+        elif message:
+            st.info(message)
+
     if not sessions:
         st.info("目前尚未建立任何議程。")
         return
@@ -506,8 +637,37 @@ def render_dashboard():
                     _session_card_html(session, selected_tag=highlight_tag),
                     unsafe_allow_html=True,
                 )
-                if card_container.button("查看詳情", key=f"card_click_{session.id}"):
-                    st.session_state.selected_session_id = session.id
-                    st.session_state.current_page = "detail"
-                    st.rerun()
+                action_cols = card_container.columns(2, gap="small")
+                with action_cols[0]:
+                    if st.button(
+                        "查看詳情",
+                        key=f"card_click_{session.id}",
+                        use_container_width=True,
+                    ):
+                        st.session_state.selected_session_id = session.id
+                        st.session_state.current_page = "detail"
+                        st.rerun()
+
+                session_status = session.status()
+                register_disabled = session_status != "available"
+                register_label = "🎫 立即報名"
+                if register_disabled:
+                    register_label = {
+                        "full": "🔴 已額滿",
+                        "expired": "⏰ 已過期",
+                    }.get(session_status, "暫不可報名")
+
+                with action_cols[1]:
+                    if st.button(
+                        register_label,
+                        key=f"card_register_{session.id}",
+                        use_container_width=True,
+                        disabled=register_disabled,
+                        type="primary" if not register_disabled else "secondary",
+                    ):
+                        _open_registration_dialog(session)
+
                 card_container.markdown("</div>", unsafe_allow_html=True)
+
+    if st.session_state.get(REG_DIALOG_FLAG):
+        _render_registration_dialog()

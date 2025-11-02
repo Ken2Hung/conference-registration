@@ -63,3 +63,4 @@ resource/*.txt
 .env
 .env.*
 !.env.example
+.cursor/worktrees.json

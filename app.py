@@ -57,6 +57,15 @@ def apply_custom_css():
         /* 隱藏 Streamlit 預設元素 */
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
+        header, [data-testid="stHeader"] {
+            visibility: hidden;
+            height: 0;
+        }
+
+        /* 調整主要容器填充避免空白 */
+        [data-testid="stAppViewContainer"] > .main .block-container {
+            padding-top: 1.5rem;
+        }
 
         /* 按鈕樣式 */
         .stButton > button {
@@ -180,13 +189,13 @@ def render_navigation():
             st.session_state.current_page = "dashboard"
             st.session_state.selected_session_id = None
 
-    with nav_col2:
-        if st.button("🎤 轉錄", use_container_width=True, key="nav_transcription"):
-            st.session_state.current_page = "transcription"
+    # with nav_col2:
+    #     if st.button("🎤 轉錄", use_container_width=True, key="nav_transcription"):
+    #         st.session_state.current_page = "transcription"
 
-    with nav_col3:
-        if st.button("🎧 錄音測試", use_container_width=True, key="nav_mic_recorder"):
-            st.session_state.current_page = "mic_capture"
+    # with nav_col3:
+    #     if st.button("🎧 錄音測試", use_container_width=True, key="nav_mic_recorder"):
+    #         st.session_state.current_page = "mic_capture"
 
     with nav_col4:
         if st.button("👤 管理員", use_container_width=True, key="nav_admin"):
@@ -264,27 +273,6 @@ def main():
         if st.button("🔄 重新整理"):
             st.session_state.clear()
             st.rerun()
-
-    # 頁尾資訊
-    st.markdown("""
-        <div style="
-            text-align: center;
-            margin-top: 80px;
-            padding: 32px;
-            color: #6b7280;
-            font-size: 14px;
-            border-top: 1px solid #2d3748;
-        ">
-            <p style="margin: 0;">
-                議程管理系統 v1.0.0 |
-                Built with ❤️ using
-                <a href="https://streamlit.io" target="_blank" style="color: #8b5cf6; text-decoration: none;">Streamlit</a>
-            </p>
-            <p style="margin: 8px 0 0 0; font-size: 12px;">
-                © 2025 Conference Management System. All rights reserved.
-            </p>
-        </div>
-    """, unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
