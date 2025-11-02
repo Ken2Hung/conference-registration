@@ -22,6 +22,7 @@ from typing import Any, Optional
 import av
 import numpy as np
 import streamlit as st
+from streamlit_autorefresh import st_autorefresh
 from opencc import OpenCC
 from streamlit_webrtc import RTCConfiguration, WebRtcMode, webrtc_streamer
 
@@ -34,6 +35,7 @@ ICE_SERVERS = [{"urls": ["stun:stun.l.google.com:19302"]}]
 AUDIO_GAIN = 2.0  # Volume boost multiplier
 TRANSCRIPTION_CHUNK_DURATION = 3.0  # Seconds between transcription calls
 VAD_RMS_THRESHOLD = 300.0  # Minimum RMS to consider as speech (filter silence)
+TRANSCRIPT_REFRESH_INTERVAL_MS = 1200  # UI polling interval during recording
 
 DEFAULT_TITLE = "🎤 即時語音轉錄（Whisper API）"
 DEFAULT_CAPTION = "使用 WebRTC 錄音並透過 Whisper API 背景轉錄為逐字稿"
@@ -153,7 +155,6 @@ def _render_transcription_ui(config: TranscriptionUIConfig, state: _SessionState
     state.ensure("last_path", "")
     state.ensure("segment_count", 0)
     state.ensure("last_segment_count", 0)
-    state.ensure("last_ui_update", 0.0)
     state.ensure("mic_permission_requested", False)
 
     if config.show_header:
@@ -360,6 +361,12 @@ def _render_transcript_display(config: TranscriptionUIConfig, state: _SessionSta
 
     # Show real-time transcript during recording
     if state.get("active", False) and token:
+        st_autorefresh(
+            interval=TRANSCRIPT_REFRESH_INTERVAL_MS,
+            limit=None,
+            key=state.key("transcript_autorefresh"),
+        )
+
         with _recorder_lock:
             segments = _transcript_segments.get(token, [])
 
@@ -414,21 +421,10 @@ def _render_transcript_display(config: TranscriptionUIConfig, state: _SessionSta
         )
         st.caption(caption_text)
 
-        current_time = time.time()
-        time_since_last_update = current_time - state.get("last_ui_update", 0.0)
-
-        if has_new_content:
-            print("[Transcription UI] Refreshing due to new content")
-            state.set("last_ui_update", current_time)
-            time.sleep(0.05)
-            st.rerun()
-        elif time_since_last_update >= 2.0:
-            state.set("last_ui_update", current_time)
-            time.sleep(0.05)
-            st.rerun()
-
     # Show final transcript after recording stopped
     elif state.get("last_transcript"):
+        state.delete("transcript_autorefresh")
+
         st.text_area(
             "完整逐字稿",
             value=state.get("last_transcript"),
@@ -451,6 +447,7 @@ def _render_transcript_display(config: TranscriptionUIConfig, state: _SessionSta
                 key=state.key("download_button"),
             )
     else:
+        state.delete("transcript_autorefresh")
         st.info("點擊「開始錄音」後，即時轉錄結果將顯示在此處")
 
 
@@ -516,7 +513,6 @@ def _start_recording(state: _SessionState, config: TranscriptionUIConfig) -> Non
     state.set("last_path", "")
     state.set("segment_count", 0)
     state.set("last_segment_count", 0)
-    state.set("last_ui_update", time.time())
 
     st.rerun()
 
@@ -576,6 +572,7 @@ def _stop_recording(state: _SessionState, config: TranscriptionUIConfig) -> None
 
     state.set("active", False)
     state.set("token", None)
+    state.delete("transcript_autorefresh")
 
     if wav_path and wav_path.exists():
         file_size = wav_path.stat().st_size
