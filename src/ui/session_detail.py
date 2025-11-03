@@ -17,7 +17,6 @@ from src.ui.transcription_widget import (
     MODEL_COST_CONFIG,
 )
 from src.ui.transcript_history import render_transcript_history
-from streamlit_autorefresh import st_autorefresh
 
 SESSION_MODEL_SELECTIONS: dict[str, str] = {}
 

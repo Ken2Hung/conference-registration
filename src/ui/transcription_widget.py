@@ -22,7 +22,6 @@ from typing import Any, Optional
 import av
 import numpy as np
 import streamlit as st
-from streamlit_autorefresh import st_autorefresh
 from opencc import OpenCC
 from streamlit_webrtc import RTCConfiguration, WebRtcMode, webrtc_streamer
 
@@ -36,6 +35,7 @@ AUDIO_GAIN = 2.0  # Volume boost multiplier
 TRANSCRIPTION_CHUNK_DURATION = 3.0  # Seconds between transcription calls
 VAD_RMS_THRESHOLD = 300.0  # Minimum RMS to consider as speech (filter silence)
 TRANSCRIPT_REFRESH_INTERVAL_MS = 1200  # UI polling interval during recording
+TRANSCRIPT_REFRESH_INTERVAL_SECONDS = TRANSCRIPT_REFRESH_INTERVAL_MS / 1000.0
 VAD_SAMPLE_DENSITY = 0.12  # Minimum proportion of loud samples to treat as speech
 VAD_AMPLITUDE_GATE = 1100  # Sample amplitude gate used by density check
 
@@ -447,47 +447,66 @@ def _render_status(state: _SessionState) -> None:
     st.markdown("#### 📊 錄音狀態")
 
     token = state.get("token")
-    bytes_written = 0
-    last_rms = 0.0
-
-    if token:
-        with _recorder_lock:
-            bytes_written = _bytes_written.get(token, 0)
-            last_rms = _last_rms.get(token, 0.0)
-
+    is_active = state.get("active", False)
     current_model = state.get("model_name", "whisper-1")
-    path_str = state.get("path", "")
-    if path_str:
-        st.write(f"📁 檔案：`{path_str}`")
-    else:
-        st.write("📁 尚未開始錄音")
+    run_interval = TRANSCRIPT_REFRESH_INTERVAL_SECONDS if is_active else None
+    state_prefix = state.prefix
 
-    if bytes_written > 0:
-        duration_sec = bytes_written / (SAMPLE_RATE * SAMPLE_WIDTH)
-        st.write(f"⏱️ 已錄製：{duration_sec:.1f} 秒")
-    else:
-        st.write("⏱️ 已錄製：0.0 秒")
+    @st.fragment(run_every=run_interval)
+    def _status_fragment(
+        prefix: str,
+        token_value: Optional[str],
+        model_hint: str,
+        active_flag: bool,
+    ) -> None:
+        fragment_state = _SessionState(prefix)
+        bytes_written = 0
+        last_rms = 0.0
 
-    st.write(f"🔊 當前 RMS：{last_rms:.1f}")
-    st.write(f"🎚️ 採樣率：{SAMPLE_RATE} Hz")
-    st.write(f"📈 音量增益：{AUDIO_GAIN}x")
+        if token_value:
+            with _recorder_lock:
+                bytes_written = _bytes_written.get(token_value, 0)
+                last_rms = _last_rms.get(token_value, 0.0)
 
-    cost_info = None
-    if state.get("active", False) and token:
-        active_model, cost_info, _, _ = _calculate_cost_snapshot(token, current_model)
-        if active_model != current_model:
-            state.set("model_name", active_model)
-            current_model = active_model
+        path_str = fragment_state.get("path", "")
+        if path_str:
+            st.write(f"📁 檔案：`{path_str}`")
+        else:
+            st.write("📁 尚未開始錄音")
 
-    if cost_info:
-        st.write(_format_cost_caption(cost_info))
-    else:
-        last_cost = state.get("last_cost")
-        if last_cost:
-            st.write(_format_cost_caption(last_cost))
+        if bytes_written > 0:
+            duration_sec = bytes_written / (SAMPLE_RATE * SAMPLE_WIDTH)
+            st.write(f"⏱️ 已錄製：{duration_sec:.1f} 秒")
+        else:
+            st.write("⏱️ 已錄製：0.0 秒")
 
-    if state.get("active", False):
-        st.write(f"📝 已轉錄段數：{state.get('segment_count', 0)}")
+        st.write(f"🔊 當前 RMS：{last_rms:.1f}")
+        st.write(f"🎚️ 採樣率：{SAMPLE_RATE} Hz")
+        st.write(f"📈 音量增益：{AUDIO_GAIN}x")
+
+        cost_info = None
+        current_fragment_model = fragment_state.get("model_name", model_hint)
+        if active_flag and token_value:
+            active_model, cost_info, _, _ = _calculate_cost_snapshot(
+                token_value,
+                current_fragment_model,
+            )
+            if active_model != current_fragment_model:
+                fragment_state.set("model_name", active_model)
+                current_fragment_model = active_model
+
+        if cost_info:
+            st.write(_format_cost_caption(cost_info))
+            fragment_state.set("last_cost", cost_info)
+        else:
+            last_cost = fragment_state.get("last_cost")
+            if last_cost:
+                st.write(_format_cost_caption(last_cost))
+
+        if active_flag:
+            st.write(f"📝 已轉錄段數：{fragment_state.get('segment_count', 0)}")
+
+    _status_fragment(state_prefix, token, current_model, is_active)
 
 
 def _render_transcript_display(config: TranscriptionUIConfig, state: _SessionState) -> None:
@@ -495,71 +514,81 @@ def _render_transcript_display(config: TranscriptionUIConfig, state: _SessionSta
     st.markdown("#### 📄 即時轉錄結果")
 
     token = state.get("token")
+    is_active = state.get("active", False)
+    state_prefix = state.prefix
 
     # Show real-time transcript during recording
-    if state.get("active", False) and token:
-        st_autorefresh(
-            interval=TRANSCRIPT_REFRESH_INTERVAL_MS,
-            limit=None,
-            key=state.key("transcript_autorefresh"),
-        )
+    if is_active and token:
+        current_model = state.get("model_name", config.model_name)
 
-        with _recorder_lock:
-            segments = _transcript_segments.get(token, [])
+        @st.fragment(run_every=TRANSCRIPT_REFRESH_INTERVAL_SECONDS)
+        def _live_transcript_fragment(
+            prefix: str,
+            token_value: str,
+            model_value: str,
+        ) -> None:
+            fragment_state = _SessionState(prefix)
+            with _recorder_lock:
+                segments = list(_transcript_segments.get(token_value, []))
 
-        segment_count = len(segments)
-        last_segment_count = state.get("last_segment_count", 0)
-        has_new_content = segment_count != last_segment_count
+            segment_count = len(segments)
+            last_segment_count = fragment_state.get("last_segment_count", 0)
+            has_new_content = segment_count != last_segment_count
 
-        if has_new_content:
-            print(
-                f"[Transcription UI] New content detected: {segment_count} segments "
-                f"(was {last_segment_count})"
+            if has_new_content:
+                print(
+                    "[Transcription UI] New content detected: "
+                    f"{segment_count} segments (was {last_segment_count})"
+                )
+                fragment_state.set("last_segment_count", segment_count)
+                fragment_state.set("segment_count", segment_count)
+
+            current_transcript = _format_transcript_segments(segments)
+            last_update_time = datetime.now().strftime("%H:%M:%S")
+
+            if current_transcript:
+                display_value = current_transcript
+                caption_text = (
+                    f"📊 已轉錄：{len(current_transcript)} 字元 | "
+                    f"分段數：{segment_count} | 更新時間：{last_update_time}"
+                )
+            else:
+                token_preview = token_value[:8] if token_value else "N/A"
+                display_value = (
+                    f"🎤 等待轉錄結果...\n\n開始時間：{last_update_time}\n"
+                    f"Token：{token_preview}\n\n約 3 秒後會出現第一段轉錄結果"
+                )
+                caption_text = (
+                    f"⏳ 等待中... | 已檢查次數："
+                    f"{fragment_state.get('segment_count', 0)} | "
+                    f"更新時間：{last_update_time}"
+                )
+
+            display_key = fragment_state.key("transcript_display_live")
+            st.session_state[display_key] = display_value
+            st.text_area(
+                f"即時逐字稿 (最後更新：{last_update_time})",
+                value=display_value,
+                height=300,
+                help="格式：yyyy-mm-dd hh:mi:ss + 逐字稿內容 | 自動檢測更新",
+                key=display_key,
             )
-            state.set("last_segment_count", segment_count)
-            state.set("segment_count", segment_count)
+            st.caption(caption_text)
 
-        current_transcript = _format_transcript_segments(segments)
-        last_update_time = datetime.now().strftime("%H:%M:%S")
+            snapshot_model, live_cost, _, _ = _calculate_cost_snapshot(
+                token_value,
+                fragment_state.get("model_name", model_value),
+            )
+            if snapshot_model != fragment_state.get("model_name", model_value):
+                fragment_state.set("model_name", snapshot_model)
 
-        # Prepare display content
-        if current_transcript:
-            display_value = current_transcript
-            caption_text = (
-                f"📊 已轉錄：{len(current_transcript)} 字元 | "
-                f"分段數：{segment_count} | 更新時間：{last_update_time}"
-            )
-        else:
-            token_preview = token[:8] if token else "N/A"
-            display_value = (
-                f"🎤 等待轉錄結果...\n\n開始時間：{last_update_time}\n"
-                f"Token：{token_preview}\n\n約 3 秒後會出現第一段轉錄結果"
-            )
-            caption_text = (
-                f"⏳ 等待中... | 已檢查次數：{state.get('segment_count', 0)} | "
-                f"更新時間：{last_update_time}"
-            )
+            if live_cost:
+                st.caption(_format_cost_caption(live_cost))
 
-        display_key = state.key(f"transcript_display_{segment_count}")
-        st.text_area(
-            f"即時逐字稿 (最後更新：{last_update_time})",
-            value=display_value,
-            height=300,
-            help="格式：yyyy-mm-dd hh:mi:ss + 逐字稿內容 | 自動檢測更新",
-            key=display_key,
-        )
-        st.caption(caption_text)
-        _, live_cost, _, _ = _calculate_cost_snapshot(
-            token,
-            state.get("model_name", config.model_name),
-        )
-        if live_cost:
-            st.caption(_format_cost_caption(live_cost))
+        _live_transcript_fragment(state_prefix, token, current_model)
 
     # Show final transcript after recording stopped
     elif state.get("last_transcript"):
-        state.delete("transcript_autorefresh")
-
         last_transcript = state.get("last_transcript", "")
         last_model_name = state.get("last_model_name", state.get("model_name", "whisper-1"))
         cost_info = state.get("last_cost")
@@ -595,7 +624,6 @@ def _render_transcript_display(config: TranscriptionUIConfig, state: _SessionSta
                 key=state.key("download_button"),
             )
     else:
-        state.delete("transcript_autorefresh")
         st.info("點擊「開始錄音」後，即時轉錄結果將顯示在此處")
 
 
@@ -616,68 +644,75 @@ def render_transcription_feed(
     """
     st.markdown(f"#### {title}")
 
-    if refresh_interval_ms > 0:
-        st_autorefresh(
-            interval=refresh_interval_ms,
-            limit=None,
-            key=f"{prefix}_feed_autorefresh",
+    run_every = refresh_interval_ms / 1000.0 if refresh_interval_ms else None
+
+    @st.fragment(run_every=run_every)
+    def _feed_fragment(
+        fragment_prefix: str,
+        empty_text: str,
+        textarea_height: int,
+        fallback: Optional[str],
+    ) -> None:
+        with _recorder_lock:
+            token = _active_token
+            active_model = _active_model
+
+        current_fallback = fallback or active_model or "whisper-1"
+
+        if not token:
+            st.info(empty_text)
+            return
+
+        model_name, cost_info, transcript_text, segment_count = _calculate_cost_snapshot(
+            token,
+            current_fallback,
         )
 
-    with _recorder_lock:
-        token = _active_token
-        active_model = _active_model
+        last_update_time = datetime.now().strftime("%H:%M:%S")
+        token_preview = token[:8] if token else "N/A"
 
-    current_fallback = fallback_model or active_model or "whisper-1"
+        if transcript_text:
+            caption_text = (
+                f"📊 段數：{segment_count} | "
+                f"字元：{len(transcript_text)} | "
+                f"更新時間：{last_update_time} | Token：{token_preview}"
+            )
+            display_value = transcript_text
+        else:
+            caption_text = (
+                f"尚未取得轉錄內容，畫面將自動更新 | Token：{token_preview} | "
+                f"最後檢查：{last_update_time}"
+            )
+            display_value = (
+                "🎤 正在等待第一段轉錄結果...\n\n"
+                "麥克風錄音啟動後，逐字稿會自動出現在此處。"
+            )
 
-    if not token:
-        st.info(empty_message)
-        return
+        text_area_key = f"{fragment_prefix}_feed_text_area"
+        st.session_state[text_area_key] = display_value
 
-    model_name, cost_info, transcript_text, segment_count = _calculate_cost_snapshot(
-        token,
-        current_fallback,
-    )
-
-    last_update_time = datetime.now().strftime("%H:%M:%S")
-    token_preview = token[:8] if token else "N/A"
-
-    if transcript_text:
-        caption_text = (
-            f"📊 段數：{segment_count} | "
-            f"字元：{len(transcript_text)} | "
-            f"更新時間：{last_update_time} | Token：{token_preview}"
+        st.text_area(
+            "即時逐字稿",
+            value=display_value,
+            height=textarea_height,
+            key=text_area_key,
         )
-        display_value = transcript_text
-    else:
-        caption_text = (
-            f"尚未取得轉錄內容，畫面將自動更新 | Token：{token_preview} | "
-            f"最後檢查：{last_update_time}"
-        )
-        display_value = (
-            "🎤 正在等待第一段轉錄結果...\n\n"
-            "麥克風錄音啟動後，逐字稿會自動出現在此處。"
-        )
+        st.caption(caption_text)
+        if cost_info:
+            st.caption(_format_cost_caption(cost_info))
 
-    st.text_area(
-        "即時逐字稿",
-        value=display_value,
-        height=height,
-        key=f"{prefix}_feed_text_area",
-    )
-    st.caption(caption_text)
-    if cost_info:
-        st.caption(_format_cost_caption(cost_info))
+        if transcript_text:
+            download_name = f"transcript-live-{datetime.now().strftime('%Y%m%d-%H%M%S')}.txt"
+            st.download_button(
+                "下載目前逐字稿 (.txt)",
+                data=transcript_text.encode("utf-8"),
+                file_name=download_name,
+                mime="text/plain",
+                use_container_width=True,
+                key=f"{fragment_prefix}_feed_download",
+            )
 
-    if transcript_text:
-        download_name = f"transcript-live-{datetime.now().strftime('%Y%m%d-%H%M%S')}.txt"
-        st.download_button(
-            "下載目前逐字稿 (.txt)",
-            data=transcript_text.encode("utf-8"),
-            file_name=download_name,
-            mime="text/plain",
-            use_container_width=True,
-            key=f"{prefix}_feed_download",
-        )
+    _feed_fragment(prefix, empty_message, height, fallback_model)
 
 
 def _start_recording(state: _SessionState, config: TranscriptionUIConfig) -> None:
@@ -810,7 +845,6 @@ def _stop_recording(state: _SessionState, config: TranscriptionUIConfig) -> None
 
     state.set("active", False)
     state.set("token", None)
-    state.delete("transcript_autorefresh")
     state.set("last_model_name", model_used)
     state.set("last_bytes_written", bytes_written)
 
