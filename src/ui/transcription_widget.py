@@ -30,7 +30,12 @@ from src.utils.audio_utils import calculate_rms
 
 SAMPLE_RATE = 48000
 SAMPLE_WIDTH = 2  # bytes (int16)
-ICE_SERVERS = [{"urls": ["stun:stun.l.google.com:19302"]}]
+# Multiple STUN servers for better connectivity across different networks
+ICE_SERVERS = [
+    {"urls": ["stun:stun.l.google.com:19302"]},
+    {"urls": ["stun:stun1.l.google.com:19302"]},
+    {"urls": ["stun:stun.cloudflare.com:3478"]},
+]
 AUDIO_GAIN = 2.0  # Volume boost multiplier
 TRANSCRIPTION_CHUNK_DURATION = 3.0  # Seconds between transcription calls
 VAD_RMS_THRESHOLD = 300.0  # Minimum RMS to consider as speech (filter silence)
@@ -415,6 +420,11 @@ def _render_webrtc_stream(config: TranscriptionUIConfig, state: _SessionState) -
         return frame
 
     rtc_configuration = RTCConfiguration({"iceServers": ICE_SERVERS})
+
+    # Use a stable key to prevent creating multiple PeerConnections on rerun
+    # Set desired_playing_state based on active state to prevent auto-restart
+    is_active = state.get("active", False)
+
     webrtc_ctx = webrtc_streamer(
         key=state.key("transcription_mic"),
         mode=WebRtcMode.SENDONLY,
@@ -422,7 +432,7 @@ def _render_webrtc_stream(config: TranscriptionUIConfig, state: _SessionState) -
         media_stream_constraints={"audio": True, "video": False},
         rtc_configuration=rtc_configuration,
         async_processing=True,
-        desired_playing_state=True,  # Always request mic permission on page load
+        desired_playing_state=is_active,  # Only auto-start when actively recording
     )
 
     # Update mic permission status
@@ -784,7 +794,8 @@ def _start_recording(state: _SessionState, config: TranscriptionUIConfig) -> Non
     state.set("last_cost", None)
     state.set("last_bytes_written", 0)
 
-    st.rerun()
+    # Avoid rerun to prevent WebRTC PeerConnection leaks
+    # The fragment auto-refresh will handle UI updates
 
 
 def _stop_recording(state: _SessionState, config: TranscriptionUIConfig) -> None:
@@ -886,7 +897,8 @@ def _stop_recording(state: _SessionState, config: TranscriptionUIConfig) -> None
         _last_transcription_time.pop(token, None)
         _token_models.pop(token, None)
 
-    st.rerun()
+    # Avoid rerun to prevent WebRTC PeerConnection leaks
+    # The fragment auto-refresh will handle UI updates
 
 
 def _audio_worker(token: str) -> None:

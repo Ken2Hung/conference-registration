@@ -39,6 +39,23 @@ fi
 
 echo "✅ 所有檢查通過"
 echo ""
+
+# Check if port 8501 is already in use
+if lsof -ti :8501 > /dev/null 2>&1; then
+    echo "⚠️  Port 8501 已被佔用"
+    read -p "是否終止舊程序並繼續？(y/n): " -n 1 -r
+    echo ""
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        echo "🔪 終止舊程序..."
+        kill $(lsof -ti :8501) 2>/dev/null
+        sleep 2
+        echo "✅ Port 已釋放"
+    else
+        echo "❌ 啟動取消"
+        exit 1
+    fi
+fi
+
 echo "🌐 正在啟動 Streamlit 伺服器..."
 echo "   應用程式將在瀏覽器自動開啟"
 echo "   網址: http://localhost:8501"
@@ -46,5 +63,5 @@ echo ""
 echo "💡 提示: 按 Ctrl+C 可停止伺服器"
 echo ""
 
-# 啟動 Streamlit（輸出詳細日誌）
-streamlit run app.py --logger.level=debug
+# Start Streamlit with minimal logging
+streamlit run app.py --logger.level=warning
