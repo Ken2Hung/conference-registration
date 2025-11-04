@@ -718,6 +718,43 @@ def render_session_detail(session_id: str):
         st.markdown(_detail_speaker_html(session), unsafe_allow_html=True)
         st.markdown(_detail_registration_html(session), unsafe_allow_html=True)
 
+        # Display session URL
+        try:
+            import socket
+
+            # Get actual IP address
+            hostname = socket.gethostname()
+            ip_address = socket.gethostbyname(hostname)
+
+            # Try to get port from headers
+            host_header = st.context.headers.get("Host", "")
+            if ":" in host_header:
+                port = host_header.split(":")[-1]
+            else:
+                port = "8501"
+
+            protocol = st.context.headers.get("X-Forwarded-Proto", "http")
+            session_url = f"{protocol}://{ip_address}:{port}/?session_id={session.id}"
+
+            st.markdown(
+                f"""
+                <div class="detail-section" style="margin-top: 16px;">
+                    <h4>課程連結</h4>
+                    <input type="text" value="{session_url}" readonly
+                           style="width: 100%; padding: 10px; background: rgba(0,0,0,0.3);
+                                  border: 1px solid rgba(148, 163, 184, 0.3); border-radius: 8px;
+                                  color: #e2e8f0; font-size: 13px; font-family: monospace;"
+                           onclick="this.select(); document.execCommand('copy');" />
+                    <div style="color: #cbd5e1; font-size: 11px; margin-top: 6px; text-align: center;">
+                        點擊上方連結即可複製
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+        except Exception:
+            pass
+
         status = session.status()
 
         st.markdown("<div class='detail-register'>", unsafe_allow_html=True)

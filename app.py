@@ -33,16 +33,25 @@ def initialize_session_state():
 
     if "selected_session_id" not in st.session_state:
         st.session_state.selected_session_id = None
-        
+
     # 確保 admin 相關狀態存在
     if "admin_authenticated" not in st.session_state:
         st.session_state.admin_authenticated = False
-        
+
     if "admin_action" not in st.session_state:
         st.session_state.admin_action = None
-        
+
     if "edit_session_id" not in st.session_state:
         st.session_state.edit_session_id = None
+
+    # Handle URL query parameters for direct session link
+    if "url_params_processed" not in st.session_state:
+        query_params = st.query_params
+        if "session_id" in query_params:
+            session_id = query_params["session_id"]
+            st.session_state.selected_session_id = session_id
+            st.session_state.current_page = "detail"
+        st.session_state.url_params_processed = True
 
 
 def apply_custom_css():
