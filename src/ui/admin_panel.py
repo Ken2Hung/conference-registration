@@ -148,7 +148,7 @@ def _render_speaker_photo_selector(
             col1, col2 = st.columns([1, 2])
             with col1:
                 try:
-                    st.image(selected_dropdown, caption="預覽", use_container_width=True)
+                    st.image(selected_dropdown, caption="預覽", width='stretch')
                 except Exception:
                     st.error("無法載入預覽")
             with col2:
@@ -167,7 +167,7 @@ def _render_speaker_photo_selector(
         if uploaded:
             col1, col2 = st.columns([1, 2])
             with col1:
-                st.image(uploaded, caption="預覽", use_container_width=True)
+                st.image(uploaded, caption="預覽", width='stretch')
             with col2:
                 st.success(f"✓ 已上傳：{uploaded.name}")
         
@@ -287,9 +287,9 @@ def render_login_page():
 
         submit_col, cancel_col = st.columns(2, gap="small")
         with submit_col:
-            submit = st.form_submit_button("登入", use_container_width=True, type="primary")
+            submit = st.form_submit_button("登入", width='stretch', type="primary")
         with cancel_col:
-            cancel = st.form_submit_button("返回", use_container_width=True)
+            cancel = st.form_submit_button("返回", width='stretch')
 
         if submit:
             if not username or not password:
@@ -349,15 +349,15 @@ def render_admin_panel():
         with action_col1:
             st.markdown("### 議程列表")
         with action_col2:
-            if st.button("➕ 新增議程", use_container_width=True):
+            if st.button("➕ 新增議程", width='stretch'):
                 st.session_state.admin_action = "create"
                 st.session_state.admin_scroll_target = "create"
         with action_col3:
-            if st.button("🏠 返回首頁", use_container_width=True):
+            if st.button("🏠 返回首頁", width='stretch'):
                 st.session_state.current_page = "dashboard"
-                return
+                st.rerun()
         with action_col4:
-            if st.button("🚪 登出", use_container_width=True):
+            if st.button("🚪 登出", width='stretch'):
                 logout_admin()
                 st.session_state.current_page = "dashboard"
                 st.success("已登出")
@@ -496,9 +496,9 @@ def render_create_session_form():
 
         col1, col2 = st.columns(2, gap="small")
         with col1:
-            submit = st.form_submit_button("✅ 建立", type="primary", use_container_width=True)
+            submit = st.form_submit_button("✅ 建立", type="primary", width='stretch')
         with col2:
-            cancel = st.form_submit_button("❌ 取消", use_container_width=True)
+            cancel = st.form_submit_button("❌ 取消", width='stretch')
 
         if submit:
             tags_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
@@ -511,6 +511,9 @@ def render_create_session_form():
             else:
                 time_value = "TBD"
 
+            # Prepare speaker name
+            speaker_name_value = speaker_name.strip()
+            
             # Handle photo based on mode
             if photo_mode == "existing":
                 if not photo_data:
@@ -521,8 +524,6 @@ def render_create_session_form():
                 if photo_data is None:
                     st.error("❌ 請上傳講者照片")
                     return
-
-                speaker_name_value = speaker_name.strip()
 
                 try:
                     photo_path = _save_speaker_photo(photo_data, speaker_name_value or "speaker")
@@ -651,9 +652,9 @@ def render_edit_session_form():
 
         col1, col2 = st.columns(2, gap="small")
         with col1:
-            submit = st.form_submit_button("💾 儲存變更", type="primary", use_container_width=True)
+            submit = st.form_submit_button("💾 儲存變更", type="primary", width='stretch')
         with col2:
-            cancel = st.form_submit_button("❌ 取消", use_container_width=True)
+            cancel = st.form_submit_button("❌ 取消", width='stretch')
 
         if submit:
             tags_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
@@ -755,7 +756,7 @@ def render_delete_confirmation():
         confirm_col, cancel_col = st.columns(2, gap="small")
 
         with confirm_col:
-            if st.button("✅ 確定刪除", type="primary", use_container_width=True, key=f"confirm_delete_{session_id}"):
+            if st.button("✅ 確定刪除", type="primary", width='stretch', key=f"confirm_delete_{session_id}"):
                 try:
                     success = delete_session(session_id)
                 except Exception as error:  # pragma: no cover - defensive
@@ -779,7 +780,7 @@ def render_delete_confirmation():
                 st.rerun()
 
         with cancel_col:
-            if st.button("❌ 取消", use_container_width=True, key=f"cancel_delete_{session_id}"):
+            if st.button("❌ 取消", width='stretch', key=f"cancel_delete_{session_id}"):
                 st.session_state.admin_action = None
                 st.session_state.pop("delete_session_id", None)
                 st.rerun()

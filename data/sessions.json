@@ -48,29 +48,89 @@
     },
     {
       "id": "session_003",
-      "registered": 1,
-      "title": "test",
-      "description": "test",
-      "date": "2025-11-21",
-      "time": "13:00-15:45",
-      "location": "test",
+      "registered": 5,
+      "title": "AI cli model實作 -- 第一課",
+      "description": "生成式 AI 逐步融入開發流程的時代，如何以「命令列模式（CLI mode）」整合 AI coding agent，將決定團隊在 AI 助力開發中的生產力與穩定性。\n本課程實作三大主流 AI 開發 CLI 工具──OpenAI Codex CLI、Anthropic Claude Code CLI、Google Gemini CLI，從安裝設定、資源修改、到最佳實踐策略，完整掌握「AI 程式碼協作者」的操作核心。\n\n透過實際操作與範例導引，你將學會如何讓 AI 在你的開發環境中發揮最大效益，並建立安全、可控且高效率的「人機協作開發流程（Agentic Coding Workflow）」。\n\n1.[Workshop]安裝 Codex、Claude Code、Gemini CLI\n\t* 認識各 CLI 的差異與相容性\n\t* 安全性與 API Key 管理實務\n\t* AI Resource 的修改與維護\n2. 如何在 CLI 模式下調整 AI 模型資源（模型版本、溝通上下文、工具調用）\n\t* 設定開發上下文、記憶檔（如 AGENTS.md、GEMINI.md）\n\t* 跨專案共享與版本控管\n3. CLI Mode開發\n\t* Codex、Claude Code、Gemini CLI的相關功能\n\t* SDD開發思路\n4. 三大 CLI 工具的最佳實踐比較與操作演示\n\n📚 參考資料（References）\n\n* [Claude Code: Best Practices for Agentic Coding – Anthropic Engineering Blog](https://www.anthropic.com/engineering/claude-code-best-practices)\n* [Best Practices for Coding with OpenAI Codex – Collaborne Engineering, Medium](https://medium.com/collaborne-engineering/best-practices-for-coding-with-openai-codex-6907ba6f7596)\n* [Mastering the Gemini CLI – Creative AI Ninja, Medium](https://medium.com/@creativeaininja/mastering-the-gemini-cli-cb6f1cb7d6eb)",
+      "date": "2025-11-06",
+      "time": "16:00-18:00",
+      "location": "TBD",
       "level": "初",
       "tags": [
-        "test"
+        "workshop",
+        "CLI Mode",
+        "AI"
       ],
-      "learning_outcomes": "test",
-      "capacity": 10,
+      "learning_outcomes": "* CLI環境安裝完成\n* 可以挑選切換AI Resource\n* SDD預先了解\n* CLI 相關應用",
+      "capacity": 14,
       "speaker": {
-        "name": "Ken2_hung",
+        "name": "Ken2_Hung(洪健儀)",
         "photo": "resource\\speaker-photo\\ken2_hung_1762230105.jpg",
-        "bio": "test"
+        "bio": "2處1部AP1-3課，資深全端工程師，擅長JAVA, Python, SQL、AI Agent 開發相關技術"
       },
       "registrants": [
         {
-          "name": "Ken",
-          "registered_at": "2025-11-02T22:45:09.323322+08:00"
+          "name": "Sharon",
+          "registered_at": "2025-11-04T13:09:26.885250+08:00"
+        },
+        {
+          "name": "Yuna",
+          "registered_at": "2025-11-04T13:09:33.075681+08:00"
+        },
+        {
+          "name": "Johnny",
+          "registered_at": "2025-11-04T13:09:38.365865+08:00"
+        },
+        {
+          "name": "Yizen",
+          "registered_at": "2025-11-04T13:09:42.048755+08:00"
+        },
+        {
+          "name": "Chris",
+          "registered_at": "2025-11-04T13:09:45.108407+08:00"
         }
       ]
+    },
+    {
+      "id": "session_004",
+      "registered": 0,
+      "title": "Agent Framework實作",
+      "description": "隨著 AI 模型從「對話助手」邁向「可行動代理（Agent）」的新階段，開發者不再只撰寫 prompt，而是需要設計一套能自主決策、執行任務、串接多工具的 Agent Framework。\n本課程將以實作為導向，介紹 Agent 的核心概念、運作流程與框架組成，並帶領學員親手打造能與外部 API、資料庫、CLI 工具互動的智能代理。\n\n學員將學習如何在 Python 環境中構建一個具備「思考、行動、回饋」能力的 Agent，掌握從任務分解、工具選擇到記憶管理的完整開發流程。",
+      "date": "2025-12-25",
+      "time": "TBD",
+      "location": "TBD",
+      "level": "中",
+      "tags": [
+        "Agent",
+        "AI",
+        "workshop"
+      ],
+      "learning_outcomes": "* 理解微軟-Agent Framework架構\n* 理解OpenAI Agent SDK",
+      "capacity": 14,
+      "speaker": {
+        "name": "Ken2_Hung(洪健儀)",
+        "photo": "resource\\speaker-photo\\ken2_hung_1762230105.jpg",
+        "bio": "2處1部AP1-3課，資深全端工程師，擅長JAVA, Python, SQL、AI Agent 開發相關技術"
+      }
+    },
+    {
+      "id": "session_005",
+      "registered": 0,
+      "title": "SDD驅動開發實作",
+      "description": "在 AI-輔助開發與自動化工程日益成熟的時代，「Spec-Driven Development（SDD）」正逐漸成為開發新典範。\n以 GitHub Spec-Kit 為核心，學習如何讓「規格（Spec）」不只是文件，而是驅動設計、開發、測試與協作的源頭。\n\n透過實際操作與範例，示範如何建立一個從 specify plan → specify implement → specify review 的完整流程，讓每一份 spec 能夠自動生成程式架構、追蹤需求變更、並串接 AI 工具（如 Claude Code、Gemini CLI）進行快速實作。\n\n特別強調「文件即程式碼」的概念，幫助開發者在版本控制中維持高可追溯性與一致性，達到規格與實作同步演進（Spec ⇆ Code parity） 的目標。",
+      "date": "2025-12-26",
+      "time": "TBD",
+      "location": "TBD",
+      "level": "中",
+      "tags": [
+        "SDD"
+      ],
+      "learning_outcomes": "* 理解 Spec-Driven Development（SDD） 的理念與工作流程\n* 熟悉 GitHub Spec-Kit 的核心指令與最佳實踐（/specify init, /specify plan, /specify implement, /specify review 等）",
+      "capacity": 14,
+      "speaker": {
+        "name": "Ken2_Hung(洪健儀)",
+        "photo": "resource\\speaker-photo\\ken2_hung_1762230105.jpg",
+        "bio": "2處1部AP1-3課，資深全端工程師，擅長JAVA, Python, SQL、AI Agent 開發相關技術"
+      }
     }
   ]
 }
