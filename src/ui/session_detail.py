@@ -18,6 +18,7 @@ from src.ui.transcription_widget import (
     MODEL_COST_CONFIG,
 )
 from src.ui.transcript_history import render_transcript_history
+from src.services.transcript_summarization_service import summarize_latest_transcript
 
 SESSION_MODEL_SELECTIONS: dict[str, str] = {}
 
@@ -584,6 +585,100 @@ def _render_admin_registrant_controls(session: Session) -> None:
                     else:
                         st.error(message)
 
+
+def _render_admin_summary_controls(session: Session) -> None:
+    """Render admin-only transcript summary generation tools."""
+    st.markdown("---")
+    st.markdown("#### 📝 AI 課程總結")
+
+    transcription_dir = _session_transcription_dir(session)
+
+    if not is_admin_authenticated():
+        st.info("請登入管理員帳號以使用 AI 總結功能")
+        return
+
+    st.caption("使用 GPT-5-mini 將最新的逐字稿潤飾為結構化的課程總結")
+
+    # Check if there are any transcript files
+    from src.services.transcript_summarization_service import get_latest_transcript
+
+    latest_transcript = get_latest_transcript(transcription_dir)
+
+    if not latest_transcript:
+        st.warning("⚠️ 目前沒有逐字稿檔案，請先完成錄音與轉錄")
+        return
+
+    st.info(f"📄 最新逐字稿：`{latest_transcript.name}`")
+
+    col1, col2 = st.columns([3, 1])
+
+    with col1:
+        if st.button(
+            "🤖 生成 AI 課程總結",
+            key=f"generate_summary_{session.id}",
+            use_container_width=True,
+            type="primary"
+        ):
+            with st.spinner("正在使用 GPT-5-mini 生成課程總結，請稍候..."):
+                success, message, summary_path = summarize_latest_transcript(
+                    transcription_dir,
+                    session_title=session.title,
+                    session_description=session.description,
+                    session_learning_outcomes=session.learning_outcomes
+                )
+
+                if success:
+                    st.success(f"✅ {message}")
+
+                    if summary_path and summary_path.exists():
+                        summary_content = summary_path.read_text(encoding="utf-8")
+
+                        with st.expander("📖 查看總結內容", expanded=True):
+                            st.markdown(summary_content)
+
+                        st.download_button(
+                            "📥 下載總結 (Markdown)",
+                            data=summary_content.encode("utf-8"),
+                            file_name=summary_path.name,
+                            mime="text/markdown",
+                            use_container_width=True,
+                            key=f"download_summary_{session.id}"
+                        )
+                else:
+                    st.error(f"❌ {message}")
+
+    with col2:
+        st.caption("模型：GPT-5-mini")
+
+    # Display existing summaries
+    if transcription_dir.exists():
+        summary_files = sorted(
+            transcription_dir.glob("summary-*.md"),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True
+        )
+
+        if summary_files:
+            st.markdown("##### 📚 歷史總結")
+
+            for idx, summary_file in enumerate(summary_files[:3], 1):
+                modified_time = datetime.fromtimestamp(summary_file.stat().st_mtime)
+                time_str = modified_time.strftime("%Y-%m-%d %H:%M:%S")
+
+                with st.expander(f"{summary_file.name} · {time_str}", expanded=False):
+                    summary_content = summary_file.read_text(encoding="utf-8")
+                    st.markdown(summary_content)
+
+                    st.download_button(
+                        "📥 下載此總結",
+                        data=summary_content.encode("utf-8"),
+                        file_name=summary_file.name,
+                        mime="text/markdown",
+                        use_container_width=True,
+                        key=f"download_history_summary_{session.id}_{idx}"
+                    )
+
+
 def render_session_detail(session_id: str):
     """
     Render the session detail page.
@@ -713,6 +808,8 @@ def render_session_detail(session_id: str):
             max_entries=6,
             key_prefix=f"session_{session.id}",
         )
+
+        _render_admin_summary_controls(session)
 
     with side_col:
         st.markdown(_detail_speaker_html(session), unsafe_allow_html=True)
