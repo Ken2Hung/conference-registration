@@ -18,7 +18,7 @@
       "registered": 0,
       "speaker": {
         "name": "Ken2_Hung(洪健儀)",
-        "photo": "resource/speaker-photo/ken_1761701540.png",
+        "photo": "resource\\speaker-photo\\ttt_1761704117.png",
         "bio": "洪健儀，2處1部AP1-3課，資深全端工程師，擅長JAVA, Python, SQL、AI Agent 開發相關技術"
       },
       "registrants": []
@@ -41,7 +41,7 @@
       "registered": 0,
       "speaker": {
         "name": "Ken2_Hung(洪健儀)",
-        "photo": "resource/speaker-photo/ken_1761701540.png",
+        "photo": "resource\\speaker-photo\\ken2_hung_1762230105.jpg",
         "bio": "洪健儀，2處1部AP1-3課，資深全端工程師，擅長JAVA, Python, SQL、AI Agent 開發相關技術"
       },
       "registrants": []
@@ -62,7 +62,7 @@
       "capacity": 10,
       "speaker": {
         "name": "Ken2_hung",
-        "photo": "resource/speaker-photo/ken2_hung_1762094682.png",
+        "photo": "resource\\speaker-photo\\ken2_hung_1762230105.jpg",
         "bio": "test"
       },
       "registrants": [

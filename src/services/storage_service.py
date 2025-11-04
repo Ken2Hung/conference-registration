@@ -3,6 +3,7 @@ import json
 import os
 import shutil
 import tempfile
+import time
 from contextlib import contextmanager
 from typing import Any, Dict
 import sys
@@ -13,12 +14,14 @@ else:
     import fcntl
 
 
-def load_json(file_path: str) -> Dict[str, Any]:
+def load_json(file_path: str, retry_count: int = 3, retry_delay: float = 0.1) -> Dict[str, Any]:
     """
     Load and parse JSON file with UTF-8 encoding.
 
     Args:
         file_path: Path to JSON file
+        retry_count: Number of retry attempts for permission errors (default: 3)
+        retry_delay: Delay in seconds between retries (default: 0.1)
 
     Returns:
         dict: Parsed JSON content
@@ -26,22 +29,29 @@ def load_json(file_path: str) -> Dict[str, Any]:
     Raises:
         FileNotFoundError: If file doesn't exist
         json.JSONDecodeError: If JSON is malformed
-        PermissionError: If file not readable
+        PermissionError: If file not readable after retries
     """
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"File not found: {file_path}")
 
-    try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except PermissionError:
-        raise PermissionError(f"Cannot read file: {file_path}")
-    except json.JSONDecodeError as e:
-        raise json.JSONDecodeError(
-            f"Malformed JSON in {file_path}: {e.msg}",
-            e.doc,
-            e.pos
-        )
+    last_error = None
+    for attempt in range(retry_count):
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except PermissionError as e:
+            last_error = e
+            if attempt < retry_count - 1:
+                time.sleep(retry_delay)
+                continue
+        except json.JSONDecodeError as e:
+            raise json.JSONDecodeError(
+                f"Malformed JSON in {file_path}: {e.msg}",
+                e.doc,
+                e.pos
+            )
+    
+    raise PermissionError(f"Cannot read file after {retry_count} attempts: {file_path}")
 
 
 def save_json(file_path: str, data: Dict[str, Any], backup: bool = True) -> None:
@@ -83,10 +93,20 @@ def save_json(file_path: str, data: Dict[str, Any], backup: bool = True) -> None
             f.flush()
             os.fsync(f.fileno())
 
+        # Windows requires more careful file replacement
         if sys.platform == "win32":
-            if os.path.exists(file_path):
-                os.remove(file_path)
-            os.rename(temp_path, file_path)
+            retry_count = 3
+            for attempt in range(retry_count):
+                try:
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                    os.rename(temp_path, file_path)
+                    break
+                except PermissionError:
+                    if attempt < retry_count - 1:
+                        time.sleep(0.1)
+                        continue
+                    raise
         else:
             os.rename(temp_path, file_path)
 
@@ -100,12 +120,13 @@ def save_json(file_path: str, data: Dict[str, Any], backup: bool = True) -> None
 
 
 @contextmanager
-def lock_file(file_path: str):
+def lock_file(file_path: str, timeout: float = 5.0):
     """
-    Context manager for file locking.
+    Context manager for file locking with retry mechanism.
 
     Args:
         file_path: Path to file to lock
+        timeout: Maximum seconds to wait for lock acquisition (default: 5.0)
 
     Yields:
         None
@@ -124,32 +145,57 @@ def lock_file(file_path: str):
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Cannot lock non-existent file: {file_path}")
 
-    lock_fd = open(file_path, "r+")
-
-    try:
-        if sys.platform == "win32":
+    # For Windows, use a lock file approach to avoid file handle conflicts
+    if sys.platform == "win32":
+        lock_file_path = f"{file_path}.lock"
+        start_time = time.time()
+        lock_fd = None
+        
+        while True:
             try:
-                msvcrt.locking(lock_fd.fileno(), msvcrt.LK_NBLCK, 1)
-            except OSError:
-                raise TimeoutError(f"Could not acquire lock on {file_path}")
-        else:
+                # Try to create an exclusive lock file
+                lock_fd = os.open(
+                    lock_file_path,
+                    os.O_CREAT | os.O_EXCL | os.O_RDWR
+                )
+                break
+            except FileExistsError:
+                # Lock file exists, wait and retry
+                if time.time() - start_time > timeout:
+                    raise TimeoutError(f"Could not acquire lock on {file_path} within {timeout}s")
+                time.sleep(0.05)
+        
+        try:
+            yield
+        finally:
+            if lock_fd is not None:
+                try:
+                    os.close(lock_fd)
+                except:
+                    pass
             try:
-                fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-            except (IOError, OSError):
-                raise TimeoutError(f"Could not acquire lock on {file_path}")
-
-        yield
-
-    finally:
-        if sys.platform == "win32":
-            try:
-                msvcrt.locking(lock_fd.fileno(), msvcrt.LK_UNLCK, 1)
+                os.remove(lock_file_path)
             except:
                 pass
-        else:
+    else:
+        # Unix/Linux file locking
+        lock_fd = open(file_path, "r+")
+        try:
+            start_time = time.time()
+            while True:
+                try:
+                    fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    break
+                except (IOError, OSError):
+                    if time.time() - start_time > timeout:
+                        raise TimeoutError(f"Could not acquire lock on {file_path} within {timeout}s")
+                    time.sleep(0.05)
+
+            yield
+
+        finally:
             try:
                 fcntl.flock(lock_fd.fileno(), fcntl.LOCK_UN)
             except:
                 pass
-
-        lock_fd.close()
+            lock_fd.close()

@@ -1,5 +1,6 @@
 """Session detail page UI component styled to match the dashboard."""
 
+import base64
 import re
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -43,6 +44,41 @@ STATUS_CONFIG = {
     "full": {"label": "已額滿", "color": "#f87171"},
     "expired": {"label": "已過期", "color": "#94a3b8"},
 }
+
+
+def _get_image_base64(image_path: str) -> str:
+    """
+    Convert image file to base64 data URI.
+    
+    Args:
+        image_path: Path to image file
+        
+    Returns:
+        Base64 data URI string, or empty string if file doesn't exist
+    """
+    try:
+        file_path = Path(image_path)
+        if not file_path.exists():
+            return ""
+        
+        with open(file_path, "rb") as f:
+            image_data = f.read()
+        
+        # Determine MIME type from extension
+        ext = file_path.suffix.lower()
+        mime_type = {
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".png": "image/png",
+            ".gif": "image/gif",
+            ".webp": "image/webp",
+        }.get(ext, "image/jpeg")
+        
+        # Encode to base64
+        b64_data = base64.b64encode(image_data).decode("utf-8")
+        return f"data:{mime_type};base64,{b64_data}"
+    except Exception:
+        return ""
 
 
 def _sanitize_directory_name(value: str) -> str:
@@ -173,6 +209,22 @@ def _inject_detail_styles():
                 color: #cbd5e1;
                 font-size: 13px;
                 line-height: 1.5;
+            }
+            .detail-speaker-photo {
+                width: 120px;
+                height: 120px;
+                border-radius: 50%;
+                object-fit: cover;
+                border: 3px solid rgba(236, 72, 153, 0.4);
+                box-shadow: 0 8px 24px rgba(236, 72, 153, 0.3);
+                margin-bottom: 16px;
+                display: block;
+            }
+            .detail-speaker-content {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
             }
             .detail-progress-track {
                 width: 100%;
@@ -345,12 +397,67 @@ def _detail_learning_html(session: Session) -> str:
 
 def _detail_speaker_html(session: Session) -> str:
     """Return speaker block HTML."""
+    photo_path = session.speaker.photo
+    
+    # Build image HTML if photo path exists
+    img_html = ""
+    if photo_path:
+        # Handle different path formats
+        if photo_path.startswith(("http://", "https://")):
+            # External URL - use directly
+            img_src = photo_path
+        elif photo_path.startswith("data:"):
+            # Already a data URI - use directly
+            img_src = photo_path
+        else:
+            # Local file path - convert to base64 data URI
+            # Normalize path separators
+            photo_path = photo_path.replace("\\", "/")
+            
+            # Try to locate the file
+            file_path = Path(photo_path)
+            if not file_path.exists():
+                # Try common alternative locations
+                alternatives = [
+                    Path(f"resource/speaker-photo/{file_path.name}"),
+                    Path(f"images/speakers/{file_path.name}"),
+                ]
+                for alt_path in alternatives:
+                    if alt_path.exists():
+                        file_path = alt_path
+                        break
+            
+            # Convert to base64 data URI
+            img_src = _get_image_base64(str(file_path))
+        
+        if img_src:
+            img_html = f'<img src="{img_src}" alt="{session.speaker.name}" class="detail-speaker-photo" />'
+        else:
+            # Fallback: create initials-based placeholder
+            initials = "".join([word[0] for word in session.speaker.name.split()[:2]]).upper()
+            img_html = f'''
+            <div class="detail-speaker-photo" style="
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: linear-gradient(135deg, #ec4899 0%, #a855f7 100%);
+                color: #18122b;
+                font-size: 36px;
+                font-weight: 700;
+            ">
+                {initials}
+            </div>
+            '''
+    
     return html_block(
         f"""
         <div class="detail-section">
             <h4>講者資訊</h4>
-            <div class="detail-speaker-name">{session.speaker.name}</div>
-            <div class="detail-speaker-bio">{session.speaker.bio}</div>
+            <div class="detail-speaker-content">
+                {img_html}
+                <div class="detail-speaker-name">{session.speaker.name}</div>
+                <div class="detail-speaker-bio">{session.speaker.bio}</div>
+            </div>
         </div>
         """
     )

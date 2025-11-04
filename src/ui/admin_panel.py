@@ -83,6 +83,97 @@ def _save_speaker_photo(uploaded_file: object, speaker_name: str) -> str:
     return str(file_path)
 
 
+def _get_existing_speaker_photos() -> list[Path]:
+    """Get list of existing speaker photos in the photo directory."""
+    if not SPEAKER_PHOTO_DIR.exists():
+        return []
+    
+    photos = []
+    for ext in ALLOWED_PHOTO_EXTENSIONS:
+        photos.extend(SPEAKER_PHOTO_DIR.glob(f"*{ext}"))
+    
+    return sorted(photos, key=lambda p: p.stat().st_mtime, reverse=True)
+
+
+def _render_speaker_photo_selector(
+    prefix: str,
+    current_photo: str = None,
+    speaker_name: str = ""
+) -> tuple[str, object]:
+    """
+    Render speaker photo selection UI with two modes: select existing or upload new.
+    
+    Args:
+        prefix: Unique prefix for widget keys
+        current_photo: Current photo path (optional)
+        speaker_name: Speaker name for generating filename
+        
+    Returns:
+        Tuple of (photo_mode, photo_path_or_upload)
+        - photo_mode: "existing" or "upload"
+        - photo_path_or_upload: Path string if existing, UploadedFile if upload
+    """
+    existing_photos = _get_existing_speaker_photos()
+    
+    st.markdown("#### 📸 講者照片")
+    
+    if current_photo:
+        st.caption(f"目前照片：`{current_photo}`")
+    
+    photo_mode = st.radio(
+        "選擇照片方式",
+        options=["從現有圖片選擇", "上傳新圖片"],
+        key=f"{prefix}_photo_mode",
+        horizontal=True,
+    )
+    
+    if photo_mode == "從現有圖片選擇":
+        if not existing_photos:
+            st.warning("⚠️ 目前沒有可用的講者照片，請選擇上傳新圖片")
+            return "upload", None
+        
+        # Display photo gallery
+        photo_options = {str(p): p.name for p in existing_photos}
+        
+        # Dropdown selection
+        selected_dropdown = st.selectbox(
+            "選擇現有照片",
+            options=list(photo_options.keys()),
+            format_func=lambda x: photo_options[x],
+            key=f"{prefix}_photo_dropdown",
+        )
+        
+        # Preview selected photo
+        if selected_dropdown:
+            col1, col2 = st.columns([1, 2])
+            with col1:
+                try:
+                    st.image(selected_dropdown, caption="預覽", use_container_width=True)
+                except Exception:
+                    st.error("無法載入預覽")
+            with col2:
+                st.info(f"✓ 已選擇：{photo_options[selected_dropdown]}")
+        
+        return "existing", selected_dropdown
+    
+    else:  # Upload new
+        uploaded = st.file_uploader(
+            "上傳講者照片",
+            type=["png", "jpg", "jpeg", "gif"],
+            key=f"{prefix}_photo_upload",
+            help="支援 PNG、JPG、JPEG、GIF 格式，建議檔案大小 < 10MB"
+        )
+        
+        if uploaded:
+            col1, col2 = st.columns([1, 2])
+            with col1:
+                st.image(uploaded, caption="預覽", use_container_width=True)
+            with col2:
+                st.success(f"✓ 已上傳：{uploaded.name}")
+        
+        return "upload", uploaded
+
+
 def _inject_admin_styles():
     """Inject admin panel styles."""
     st.markdown(
@@ -393,7 +484,14 @@ def render_create_session_form():
 
         st.markdown("#### 講者資訊")
         speaker_name = st.text_input("講者姓名*")
-        speaker_photo_upload = st.file_uploader("講者照片*", type=["png", "jpg", "jpeg", "gif"])
+        
+        # Use new photo selector
+        photo_mode, photo_data = _render_speaker_photo_selector(
+            prefix="create_session",
+            current_photo=None,
+            speaker_name=speaker_name
+        )
+        
         speaker_bio = st.text_area("講者簡介*")
 
         col1, col2 = st.columns(2, gap="small")
@@ -413,17 +511,24 @@ def render_create_session_form():
             else:
                 time_value = "TBD"
 
-            if speaker_photo_upload is None:
-                st.error("❌ 請上傳講者照片")
-                return
+            # Handle photo based on mode
+            if photo_mode == "existing":
+                if not photo_data:
+                    st.error("❌ 請選擇講者照片")
+                    return
+                photo_path = photo_data
+            else:  # upload
+                if photo_data is None:
+                    st.error("❌ 請上傳講者照片")
+                    return
 
-            speaker_name_value = speaker_name.strip()
+                speaker_name_value = speaker_name.strip()
 
-            try:
-                photo_path = _save_speaker_photo(speaker_photo_upload, speaker_name_value or "speaker")
-            except ValueError as error:
-                st.error(f"❌ 上傳失敗：{error}")
-                return
+                try:
+                    photo_path = _save_speaker_photo(photo_data, speaker_name_value or "speaker")
+                except ValueError as error:
+                    st.error(f"❌ 上傳失敗：{error}")
+                    return
 
             session_payload = {
                 "title": title.strip(),
@@ -534,12 +639,14 @@ def render_edit_session_form():
 
         st.markdown("#### 講者資訊")
         speaker_name = st.text_input("講者姓名*", value=session.speaker.name)
-        st.caption(f"目前講者照片：{session.speaker.photo}")
-        speaker_photo_upload = st.file_uploader(
-            "更新講者照片 (選填)",
-            type=["png", "jpg", "jpeg", "gif"],
-            key=f"edit_speaker_photo_{session_id}"
+        
+        # Use new photo selector
+        photo_mode, photo_data = _render_speaker_photo_selector(
+            prefix=f"edit_session_{session_id}",
+            current_photo=session.speaker.photo,
+            speaker_name=speaker_name
         )
+        
         speaker_bio = st.text_area("講者簡介*", value=session.speaker.bio)
 
         col1, col2 = st.columns(2, gap="small")
@@ -558,13 +665,19 @@ def render_edit_session_form():
             else:
                 time_value = "TBD"
 
-            photo_path = session.speaker.photo
-            if speaker_photo_upload is not None:
-                try:
-                    photo_path = _save_speaker_photo(speaker_photo_upload, speaker_name.strip() or "speaker")
-                except ValueError as error:
-                    st.error(f"❌ 上傳失敗：{error}")
-                    return
+            # Handle photo based on mode
+            photo_path = session.speaker.photo  # Keep current by default
+            
+            if photo_mode == "existing":
+                if photo_data:
+                    photo_path = photo_data
+            else:  # upload
+                if photo_data is not None:
+                    try:
+                        photo_path = _save_speaker_photo(photo_data, speaker_name.strip() or "speaker")
+                    except ValueError as error:
+                        st.error(f"❌ 上傳失敗：{error}")
+                        return
 
             updates = {
                 "title": title.strip(),
