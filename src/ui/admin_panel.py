@@ -471,6 +471,13 @@ def render_create_session_form():
                 with end_col:
                     end_time = st.time_input("結束時間*", value=default_end, key="create_session_end_time")
 
+        registration_start_date = st.date_input(
+            "開始報名日期",
+            value=None,
+            help="留空表示建立後立即開放報名",
+            key="create_registration_start_date"
+        )
+
         location = st.text_input("地點*", placeholder="例：線上 Zoom 會議室")
 
         col1, col2 = st.columns(2, gap="small")
@@ -511,6 +518,20 @@ def render_create_session_form():
             else:
                 time_value = "TBD"
 
+            # Validate registration start date
+            from src.utils.validation import validate_registration_start_date
+
+            registration_start_date_str = None
+            if registration_start_date:
+                registration_start_date_str = registration_start_date.isoformat()
+                is_valid, error_msg = validate_registration_start_date(
+                    registration_start_date_str,
+                    date.isoformat()
+                )
+                if not is_valid:
+                    st.error(f"❌ {error_msg}")
+                    return
+
             # Prepare speaker name
             speaker_name_value = speaker_name.strip()
             
@@ -546,6 +567,7 @@ def render_create_session_form():
                     "photo": photo_path,
                     "bio": speaker_bio.strip(),
                 },
+                "registration_start_date": registration_start_date_str,
             }
 
             try:
@@ -627,6 +649,20 @@ def render_edit_session_form():
                         key=f"edit_session_end_{session_id}"
                     )
 
+        default_reg_start_date = None
+        if session.registration_start_date:
+            try:
+                default_reg_start_date = datetime.strptime(session.registration_start_date, "%Y-%m-%d").date()
+            except (ValueError, AttributeError):
+                pass
+
+        registration_start_date = st.date_input(
+            "開始報名日期",
+            value=default_reg_start_date,
+            help="留空表示立即開放報名",
+            key=f"edit_registration_start_date_{session_id}"
+        )
+
         location = st.text_input("地點*", value=session.location)
 
         col1, col2 = st.columns(2, gap="small")
@@ -666,6 +702,20 @@ def render_edit_session_form():
             else:
                 time_value = "TBD"
 
+            # Validate registration start date
+            from src.utils.validation import validate_registration_start_date
+
+            registration_start_date_str = None
+            if registration_start_date:
+                registration_start_date_str = registration_start_date.isoformat()
+                is_valid, error_msg = validate_registration_start_date(
+                    registration_start_date_str,
+                    date.isoformat()
+                )
+                if not is_valid:
+                    st.error(f"❌ {error_msg}")
+                    return
+
             # Handle photo based on mode
             photo_path = session.speaker.photo  # Keep current by default
             
@@ -695,6 +745,7 @@ def render_edit_session_form():
                     "photo": photo_path,
                     "bio": speaker_bio.strip(),
                 },
+                "registration_start_date": registration_start_date_str,
             }
 
             try:

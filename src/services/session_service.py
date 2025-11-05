@@ -71,7 +71,8 @@ def get_all_sessions() -> List[Session]:
             capacity=session_data["capacity"],
             registered=session_data["registered"],
             speaker=speaker,
-            registrants=registrants
+            registrants=registrants,
+            registration_start_date=session_data.get("registration_start_date")
         )
 
         sessions.append(session)

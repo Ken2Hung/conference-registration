@@ -43,6 +43,7 @@ STATUS_CONFIG = {
     "available": {"label": "可報名", "color": "#22d3ee"},
     "full": {"label": "已額滿", "color": "#f87171"},
     "expired": {"label": "已過期", "color": "#94a3b8"},
+    "not_open": {"label": "尚未開放", "color": "#fbbf24"},
 }
 
 
@@ -792,6 +793,7 @@ def render_session_detail(session_id: str):
             button_label = {
                 "full": "🔴 已額滿",
                 "expired": "⏰ 已過期",
+                "not_open": "🔒 尚未開放",
             }.get(status, "已關閉")
 
             st.button(

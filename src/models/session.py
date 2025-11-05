@@ -2,7 +2,7 @@
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 from src.models.speaker import Speaker
 
 
@@ -23,6 +23,7 @@ class Session:
     registered: int
     speaker: Speaker
     registrants: List['Registrant'] = field(default_factory=list)
+    registration_start_date: Optional[str] = None
 
     def __post_init__(self):
         """Validate session data after initialization."""
@@ -77,17 +78,40 @@ class Session:
         """Check if session is in the future."""
         return not self.is_past()
 
+    def is_registration_open(self) -> bool:
+        """
+        Check if registration is currently open based on start date.
+
+        Returns:
+            True if registration_start_date is None or current date >= start date
+            False if current date < registration_start_date
+        """
+        if self.registration_start_date is None:
+            return True
+
+        try:
+            start_date = datetime.strptime(self.registration_start_date, "%Y-%m-%d").date()
+            current_date = datetime.now().date()
+            return current_date >= start_date
+        except (ValueError, AttributeError):
+            return True
+
     def status(self) -> str:
         """
         Get session status.
 
         Returns:
-            'expired' if past, 'full' if at capacity, 'available' otherwise
+            'expired' if past
+            'full' if at capacity
+            'not_open' if registration hasn't started yet
+            'available' otherwise
         """
         if self.is_past():
             return "expired"
         elif self.is_full():
             return "full"
+        elif not self.is_registration_open():
+            return "not_open"
         else:
             return "available"
 
@@ -109,6 +133,7 @@ class Session:
             - (True, "") if registration allowed
             - (False, "已額滿") if session is full
             - (False, "已過期") if session has passed
+            - (False, "報名尚未開放，開放日期：YYYY-MM-DD") if registration not open yet
             - (False, "您已報名") if name is duplicate
         """
         from src.utils.validation import normalize_name
@@ -117,6 +142,10 @@ class Session:
             return False, "已額滿"
         if self.is_past():
             return False, "已過期"
+        if not self.is_registration_open():
+            if self.registration_start_date:
+                return False, f"報名尚未開放，開放日期：{self.registration_start_date}"
+            return False, "報名尚未開放"
 
         # Check duplicate using normalized comparison
         normalized = normalize_name(name)

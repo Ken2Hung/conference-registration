@@ -301,3 +301,42 @@ def validate_level(level: str) -> Tuple[bool, str]:
     if level not in valid_levels:
         return False, "難度必須為「初」、「中」或「高」"
     return True, ""
+
+
+def validate_registration_start_date(start_date_str: str, session_date_str: str) -> Tuple[bool, str]:
+    """
+    Validate registration start date.
+
+    Args:
+        start_date_str: Registration start date in YYYY-MM-DD format (or None)
+        session_date_str: Session date in YYYY-MM-DD format
+
+    Returns:
+        Tuple of (is_valid: bool, error_message: str)
+        - (True, "") if valid or None
+        - (False, "日期格式錯誤") if format invalid
+        - (False, "開始報名日期必須早於或等於議程日期") if start date > session date
+    """
+    if start_date_str is None or start_date_str == "":
+        return True, ""
+
+    if not isinstance(start_date_str, str):
+        return False, "日期格式錯誤"
+
+    if not re.match(r"^\d{4}-\d{2}-\d{2}$", start_date_str):
+        return False, "日期格式錯誤"
+
+    try:
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+    except ValueError:
+        return False, "日期格式錯誤"
+
+    try:
+        session_date = datetime.strptime(session_date_str, "%Y-%m-%d").date()
+    except ValueError:
+        return False, "議程日期格式錯誤"
+
+    if start_date > session_date:
+        return False, "開始報名日期必須早於或等於議程日期"
+
+    return True, ""
