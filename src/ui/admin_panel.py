@@ -450,7 +450,20 @@ def render_create_session_form():
 
         col1, col2 = st.columns(2, gap="small")
         with col1:
-            date = st.date_input("日期*", value=datetime.now().date())
+            date_mode = st.radio(
+                "日期模式",
+                options=["具體日期", "TBD"],
+                horizontal=True,
+                index=0,
+                key="create_date_mode"
+            )
+
+            date = None
+            if date_mode == "具體日期":
+                date = st.date_input("日期*", value=datetime.now().date(), key="create_session_date")
+            else:
+                st.info("日期將設定為 TBD（待定）")
+
         with col2:
             time_mode = st.radio(
                 "時間模式",
@@ -510,6 +523,12 @@ def render_create_session_form():
         if submit:
             tags_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
 
+            # Handle date mode
+            if date_mode == "具體日期":
+                date_value = date.isoformat()
+            else:
+                date_value = "TBD"
+
             if time_mode == "具體時間":
                 if end_time <= start_time:
                     st.error("❌ 結束時間必須晚於開始時間")
@@ -526,7 +545,7 @@ def render_create_session_form():
                 registration_start_date_str = registration_start_date.isoformat()
                 is_valid, error_msg = validate_registration_start_date(
                     registration_start_date_str,
-                    date.isoformat()
+                    date_value
                 )
                 if not is_valid:
                     st.error(f"❌ {error_msg}")
@@ -555,7 +574,7 @@ def render_create_session_form():
             session_payload = {
                 "title": title.strip(),
                 "description": description.strip(),
-                "date": date.isoformat(),
+                "date": date_value,
                 "time": time_value,
                 "location": location.strip(),
                 "level": level,
@@ -607,7 +626,15 @@ def render_edit_session_form():
             st.session_state.edit_session_id = None
         return
 
-    default_date = datetime.strptime(session.date, "%Y-%m-%d").date()
+    # Determine default date mode
+    is_date_tbd = session.date.upper() == "TBD"
+    default_date = None
+    if not is_date_tbd:
+        try:
+            default_date = datetime.strptime(session.date, "%Y-%m-%d").date()
+        except ValueError:
+            default_date = datetime.now().date()
+
     tags_default = ", ".join(session.tags)
 
     with st.form("edit_session_form", clear_on_submit=False):
@@ -616,7 +643,24 @@ def render_edit_session_form():
 
         col1, col2 = st.columns(2, gap="small")
         with col1:
-            date = st.date_input("日期*", value=default_date)
+            date_mode = st.radio(
+                "日期模式",
+                options=["具體日期", "TBD"],
+                horizontal=True,
+                index=0 if not is_date_tbd else 1,
+                key=f"edit_date_mode_{session_id}"
+            )
+
+            date = None
+            if date_mode == "具體日期":
+                date = st.date_input(
+                    "日期*",
+                    value=default_date or datetime.now().date(),
+                    key=f"edit_session_date_{session_id}"
+                )
+            else:
+                st.info("日期將設定為 TBD（待定）")
+
         with col2:
             time_mode = st.radio(
                 "時間模式",
@@ -694,6 +738,13 @@ def render_edit_session_form():
 
         if submit:
             tags_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
+
+            # Handle date mode
+            if date_mode == "具體日期":
+                date_value = date.isoformat()
+            else:
+                date_value = "TBD"
+
             if time_mode == "具體時間":
                 if end_time <= start_time:
                     st.error("❌ 結束時間必須晚於開始時間")
@@ -710,7 +761,7 @@ def render_edit_session_form():
                 registration_start_date_str = registration_start_date.isoformat()
                 is_valid, error_msg = validate_registration_start_date(
                     registration_start_date_str,
-                    date.isoformat()
+                    date_value
                 )
                 if not is_valid:
                     st.error(f"❌ {error_msg}")
@@ -733,7 +784,7 @@ def render_edit_session_form():
             updates = {
                 "title": title.strip(),
                 "description": description.strip(),
-                "date": date.isoformat(),
+                "date": date_value,
                 "time": time_value,
                 "location": location.strip(),
                 "level": level,

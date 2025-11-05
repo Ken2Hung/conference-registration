@@ -121,7 +121,7 @@ def validate_speaker(speaker_data: Dict[str, Any]) -> bool:
 
 def validate_date_format(date_str: str) -> bool:
     """
-    Validate date string in YYYY-MM-DD format.
+    Validate date string in YYYY-MM-DD format or TBD.
 
     Args:
         date_str: Date string to validate
@@ -135,8 +135,12 @@ def validate_date_format(date_str: str) -> bool:
     if not isinstance(date_str, str):
         raise ValueError("Date must be a string")
 
+    # Allow TBD as valid date
+    if date_str.strip().upper() == "TBD":
+        return True
+
     if not re.match(r"^\d{4}-\d{2}-\d{2}$", date_str):
-        raise ValueError(f"Date must be in YYYY-MM-DD format: {date_str}")
+        raise ValueError(f"Date must be in YYYY-MM-DD format or TBD: {date_str}")
 
     try:
         datetime.strptime(date_str, "%Y-%m-%d")
@@ -309,7 +313,7 @@ def validate_registration_start_date(start_date_str: str, session_date_str: str)
 
     Args:
         start_date_str: Registration start date in YYYY-MM-DD format (or None)
-        session_date_str: Session date in YYYY-MM-DD format
+        session_date_str: Session date in YYYY-MM-DD format or TBD
 
     Returns:
         Tuple of (is_valid: bool, error_message: str)
@@ -330,6 +334,10 @@ def validate_registration_start_date(start_date_str: str, session_date_str: str)
         start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
     except ValueError:
         return False, "日期格式錯誤"
+
+    # If session date is TBD, no need to compare dates
+    if session_date_str.strip().upper() == "TBD":
+        return True, ""
 
     try:
         session_date = datetime.strptime(session_date_str, "%Y-%m-%d").date()
