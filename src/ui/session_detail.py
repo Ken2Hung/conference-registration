@@ -803,7 +803,7 @@ def render_session_detail(session_id: str):
         render_transcript_history(
             resource_dir=transcription_dir,
             heading="🗂️ 歷史逐字稿",
-            description="以下列表以非同步方式載入最近的 Whisper 轉錄結果。",
+            description="以下列表以非同步方式載入最近轉錄結果。",
             empty_message="此議程尚未產生逐字稿檔案。",
             max_entries=6,
             key_prefix=f"session_{session.id}",
