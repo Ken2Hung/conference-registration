@@ -48,7 +48,7 @@
     },
     {
       "id": "session_003",
-      "registered": 5,
+      "registered": 20,
       "title": "AI cli model實作 -- 第一課",
       "description": "生成式 AI 逐步融入開發流程的時代，如何以「命令列模式（CLI mode）」整合 AI coding agent，將決定團隊在 AI 助力開發中的生產力與穩定性。\n本課程實作三大主流 AI 開發 CLI 工具──OpenAI Codex CLI、Anthropic Claude Code CLI、Google Gemini CLI，從安裝設定、資源修改、到最佳實踐策略，完整掌握「AI 程式碼協作者」的操作核心。\n\n透過實際操作與範例導引，你將學會如何讓 AI 在你的開發環境中發揮最大效益，並建立安全、可控且高效率的「人機協作開發流程（Agentic Coding Workflow）」。\n\n1.[Workshop]安裝 Codex、Claude Code、Gemini CLI\n\t* 認識各 CLI 的差異與相容性\n\t* 安全性與 API Key 管理實務\n\t* AI Resource 的修改與維護\n2. 如何在 CLI 模式下調整 AI 模型資源（模型版本、溝通上下文、工具調用）\n\t* 設定開發上下文、記憶檔（如 AGENTS.md、GEMINI.md）\n\t* 跨專案共享與版本控管\n3. CLI Mode開發\n\t* Codex、Claude Code、Gemini CLI的相關功能\n\t* SDD開發思路\n4. 三大 CLI 工具的最佳實踐比較與操作演示\n\n📚 參考資料（References）\n\n* [Claude Code: Best Practices for Agentic Coding – Anthropic Engineering Blog](https://www.anthropic.com/engineering/claude-code-best-practices)\n* [Best Practices for Coding with OpenAI Codex – Collaborne Engineering, Medium](https://medium.com/collaborne-engineering/best-practices-for-coding-with-openai-codex-6907ba6f7596)\n* [Mastering the Gemini CLI – Creative AI Ninja, Medium](https://medium.com/@creativeaininja/mastering-the-gemini-cli-cb6f1cb7d6eb)",
       "date": "2025-11-06",
@@ -61,7 +61,7 @@
         "AI"
       ],
       "learning_outcomes": "* CLI環境安裝完成\n* 可以挑選切換AI Resource\n* SDD預先了解\n* CLI 相關應用",
-      "capacity": 14,
+      "capacity": 20,
       "speaker": {
         "name": "Ken2_Hung(洪健儀)",
         "photo": "resource\\speaker-photo\\ken2_hung_1762230105.jpg",
@@ -87,6 +87,66 @@
         {
           "name": "Chris",
           "registered_at": "2025-11-04T13:09:45.108407+08:00"
+        },
+        {
+          "name": "Jackson",
+          "registered_at": "2025-11-04T14:26:34.881252+08:00"
+        },
+        {
+          "name": "Yushan",
+          "registered_at": "2025-11-04T14:26:38.706908+08:00"
+        },
+        {
+          "name": "Allen4",
+          "registered_at": "2025-11-04T14:27:10.434995+08:00"
+        },
+        {
+          "name": "David",
+          "registered_at": "2025-11-04T14:34:35.821907+08:00"
+        },
+        {
+          "name": "Sphere",
+          "registered_at": "2025-11-04T15:04:15.199781+08:00"
+        },
+        {
+          "name": "Ivy",
+          "registered_at": "2025-11-04T15:04:56.785038+08:00"
+        },
+        {
+          "name": "Sian",
+          "registered_at": "2025-11-04T15:27:44.303971+08:00"
+        },
+        {
+          "name": "Daniel Du",
+          "registered_at": "2025-11-04T16:06:03.164586+08:00"
+        },
+        {
+          "name": "George",
+          "registered_at": "2025-11-04T16:06:07.363093+08:00"
+        },
+        {
+          "name": "claire",
+          "registered_at": "2025-11-04T16:07:37.577990+08:00"
+        },
+        {
+          "name": "NealCY_Lin",
+          "registered_at": "2025-11-04T16:12:35.454048+08:00"
+        },
+        {
+          "name": "Leo_Shie",
+          "registered_at": "2025-11-04T16:14:25.959663+08:00"
+        },
+        {
+          "name": "Victor",
+          "registered_at": "2025-11-04T16:14:31.074046+08:00"
+        },
+        {
+          "name": "BenYJ_Wu",
+          "registered_at": "2025-11-04T16:23:21.561501+08:00"
+        },
+        {
+          "name": "Donna_Li",
+          "registered_at": "2025-11-04T16:23:45.189767+08:00"
         }
       ]
     },

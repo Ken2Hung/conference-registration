@@ -165,7 +165,7 @@ def render_transcript_history(
                 continue
 
             st.caption(
-                f"來源：OpenAI Whisper | 字元數：{len(record.content)} | "
+                f"來源：OpenAI | 字元數：{len(record.content)} | "
                 f"大小：{record.size_bytes / 1024:.1f} KB"
             )
 

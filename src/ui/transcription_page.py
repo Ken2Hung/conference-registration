@@ -24,8 +24,8 @@ def render_transcription_page() -> None:
     render_transcript_history(
         resource_dir=resource_dir,
         heading="🗂️ 歷史逐字稿",
-        description="以下內容由 OpenAI Whisper 即時轉錄，使用非同步方式載入以避免阻塞頁面。",
-        empty_message="尚未產生任何逐字稿。開始錄音後，最新的 Whisper 轉錄會顯示於此。",
+        description="以下內容由即時轉錄，使用非同步方式載入以避免阻塞頁面。",
+        empty_message="尚未產生任何逐字稿。開始錄音後，最新的 轉錄會顯示於此。",
         max_entries=8,
         key_prefix="transcription_page",
     )

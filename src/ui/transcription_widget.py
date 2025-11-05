@@ -54,8 +54,8 @@ MODEL_COST_CONFIG = {
     },
 }
 
-DEFAULT_TITLE = "🎤 即時語音轉錄（Whisper API）"
-DEFAULT_CAPTION = "使用 WebRTC 錄音並透過 Whisper API 背景轉錄為逐字稿"
+DEFAULT_TITLE = "🎤 即時語音轉錄"
+DEFAULT_CAPTION = "轉錄為逐字稿"
 
 # Initialize OpenCC for Simplified to Traditional Chinese conversion
 _opencc_converter = OpenCC("s2t")
@@ -1093,7 +1093,7 @@ def _save_transcript(wav_path: Path, transcript: str) -> Path:
 時間：{timestamp}
 音訊檔案：{wav_path.name}
 採樣率：{SAMPLE_RATE} Hz
-模型：OpenAI Whisper (whisper-1)
+模型：OpenAI 
 格式：yyyy-mm-dd hh:mi:ss + 逐字稿內容
 
 {'=' * 60}
