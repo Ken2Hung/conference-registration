@@ -64,6 +64,10 @@ class Session:
 
     def is_past(self) -> bool:
         """Check if session date/time has passed."""
+        # If date is TBD, session is not considered past
+        if self.date.upper() == "TBD":
+            return False
+
         try:
             start_time_str = self.time.split("-")[0].strip()
             session_datetime = datetime.strptime(

@@ -169,23 +169,32 @@ def _session_sort_key(session: Session) -> tuple:
     status = session.status()
     is_expired = status == "expired"
 
+    date_str = (session.date or "").strip()
     time_str = (session.time or "").strip()
-    is_tbd = time_str.upper() == "TBD"
+    is_date_tbd = date_str.upper() == "TBD"
+    is_time_tbd = time_str.upper() == "TBD"
 
-    try:
-        if not is_tbd:
-            start_part = time_str.split("-")[0].strip()
-            dt = datetime.strptime(f"{session.date} {start_part}", "%Y-%m-%d %H:%M")
-        else:
-            dt = datetime.strptime(f"{session.date} 00:00", "%Y-%m-%d %H:%M")
-    except Exception:
-        dt = datetime.strptime(f"{session.date} 00:00", "%Y-%m-%d %H:%M")
+    # If date is TBD, use a far future timestamp for sorting
+    if is_date_tbd:
+        dt = datetime(2099, 12, 31, 23, 59)
+    else:
+        try:
+            if not is_time_tbd:
+                start_part = time_str.split("-")[0].strip()
+                dt = datetime.strptime(f"{session.date} {start_part}", "%Y-%m-%d %H:%M")
+            else:
+                dt = datetime.strptime(f"{session.date} 00:00", "%Y-%m-%d %H:%M")
+        except Exception:
+            try:
+                dt = datetime.strptime(f"{session.date} 00:00", "%Y-%m-%d %H:%M")
+            except Exception:
+                dt = datetime(2099, 12, 31, 23, 59)
 
     # Primary: expired sessions last
     primary = 1 if is_expired else 0
 
-    # Secondary: within active sessions, those with actual time before TBD
-    secondary = 1 if (not is_expired and is_tbd) else 0
+    # Secondary: within active sessions, TBD dates/times after specific ones
+    secondary = 1 if (not is_expired and (is_date_tbd or is_time_tbd)) else 0
 
     # Tertiary: newer dates first (descending)
     tertiary = -dt.timestamp()
