@@ -3,7 +3,7 @@
     {
       "id": "session_001",
       "title": "MCP V.S Function Calling",
-      "description": "本課程深入比較 MCP（Model Context Protocol）與 Function Calling 的差異，說明其架構、執行方式與語言環境。從早期的使用者提示可用工具機制，到各家廠商制定統一規格的過程，最後引入 MCP 的運作模式與實作方法，幫助開發者理解 MCP 在本地與遠端部署下的運作邏輯與優勢。  <br />課程敘述:<a href=''https://hackmd.io/@XuJU3FwJTIa6ZFRSomsbDg/H18dqY14xg''>https://hackmd.io/@XuJU3FwJTIa6ZFRSomsbDg/H18dqY14xg </a>",
+      "description": "本課程深入比較 MCP（Model Context Protocol）與 Function Calling 的差異，說明其架構、執行方式與語言環境。從早期的使用者提示可用工具機制，到各家廠商制定統一規格的過程，最後引入 MCP 的運作模式與實作方法，幫助開發者理解 MCP 在本地與遠端部署下的運作邏輯與優勢。  <br />課程敘述:  <br />\n<a href=''https://hackmd.io/@XuJU3FwJTIa6ZFRSomsbDg/H18dqY14xg''>https://hackmd.io/@XuJU3FwJTIa6ZFRSomsbDg/H18dqY14xg</a>",
       "date": "2025-10-01",
       "time": "16:00-18:00",
       "location": "立功 2F 會議室",
@@ -18,7 +18,7 @@
       "registered": 0,
       "speaker": {
         "name": "Ken2_Hung(洪健儀)",
-        "photo": "resource\\speaker-photo\\ttt_1761704117.png",
+        "photo": "resource\\speaker-photo\\ken2_hung_1762230105.jpg",
         "bio": "洪健儀，2處1部AP1-3課，資深全端工程師，擅長JAVA, Python, SQL、AI Agent 開發相關技術"
       },
       "registrants": []
@@ -152,7 +152,7 @@
     },
     {
       "id": "session_004",
-      "registered": 0,
+      "registered": 1,
       "title": "Agent Framework實作",
       "description": "隨著 AI 模型從「對話助手」邁向「可行動代理（Agent）」的新階段，開發者不再只撰寫 prompt，而是需要設計一套能自主決策、執行任務、串接多工具的 Agent Framework。\n本課程將以實作為導向，介紹 Agent 的核心概念、運作流程與框架組成，並帶領學員親手打造能與外部 API、資料庫、CLI 工具互動的智能代理。\n\n學員將學習如何在 Python 環境中構建一個具備「思考、行動、回饋」能力的 Agent，掌握從任務分解、工具選擇到記憶管理的完整開發流程。",
       "date": "2025-12-25",
@@ -170,11 +170,18 @@
         "name": "Ken2_Hung(洪健儀)",
         "photo": "resource\\speaker-photo\\ken2_hung_1762230105.jpg",
         "bio": "2處1部AP1-3課，資深全端工程師，擅長JAVA, Python, SQL、AI Agent 開發相關技術"
-      }
+      },
+      "registrants": [
+        {
+          "name": "NealCY_Lin",
+          "registered_at": "2025-11-05T14:26:11.789656+08:00"
+        }
+      ],
+      "registration_start_date": "2025-12-12"
     },
     {
       "id": "session_005",
-      "registered": 0,
+      "registered": 1,
       "title": "SDD驅動開發實作",
       "description": "在 AI-輔助開發與自動化工程日益成熟的時代，「Spec-Driven Development（SDD）」正逐漸成為開發新典範。\n以 GitHub Spec-Kit 為核心，學習如何讓「規格（Spec）」不只是文件，而是驅動設計、開發、測試與協作的源頭。\n\n透過實際操作與範例，示範如何建立一個從 specify plan → specify implement → specify review 的完整流程，讓每一份 spec 能夠自動生成程式架構、追蹤需求變更、並串接 AI 工具（如 Claude Code、Gemini CLI）進行快速實作。\n\n特別強調「文件即程式碼」的概念，幫助開發者在版本控制中維持高可追溯性與一致性，達到規格與實作同步演進（Spec ⇆ Code parity） 的目標。",
       "date": "2025-12-26",
@@ -190,7 +197,14 @@
         "name": "Ken2_Hung(洪健儀)",
         "photo": "resource\\speaker-photo\\ken2_hung_1762230105.jpg",
         "bio": "2處1部AP1-3課，資深全端工程師，擅長JAVA, Python, SQL、AI Agent 開發相關技術"
-      }
+      },
+      "registrants": [
+        {
+          "name": "NealCY_Lin",
+          "registered_at": "2025-11-05T14:25:52.715620+08:00"
+        }
+      ],
+      "registration_start_date": "2025-12-12"
     }
   ]
 }
