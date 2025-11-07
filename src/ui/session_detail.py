@@ -334,6 +334,12 @@ def _inject_detail_styles():
                 text-align: center;
                 font-size: 14px;
             }
+            .download-section {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                padding: 8px 0;
+            }
             </style>
             """
         ),
@@ -587,15 +593,53 @@ def _render_admin_registrant_controls(session: Session) -> None:
                         st.error(message)
 
 
-def _render_admin_summary_controls(session: Session) -> None:
-    """Render admin-only transcript summary generation tools."""
+def _render_summary_history(session: Session) -> None:
+    """Render summary history for all users (no admin required)."""
+    transcription_dir = _session_transcription_dir(session)
+
+    if not transcription_dir.exists():
+        return
+
+    summary_files = sorted(
+        transcription_dir.glob("summary-*.md"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True
+    )
+
+    if not summary_files:
+        return
+
     st.markdown("---")
-    st.markdown("#### 📝 AI 課程總結")
+    st.markdown("#### 📚 歷史課程總結")
+    st.caption(f"共有 {len(summary_files)} 份總結記錄，顯示最近 5 份")
+
+    for idx, summary_file in enumerate(summary_files[:5], 1):
+        modified_time = datetime.fromtimestamp(summary_file.stat().st_mtime)
+        time_str = modified_time.strftime("%Y-%m-%d %H:%M:%S")
+
+        with st.expander(f"📝 {summary_file.name} · {time_str}", expanded=False):
+            summary_content = summary_file.read_text(encoding="utf-8")
+            st.markdown(summary_content)
+
+            st.download_button(
+                "📥 下載此總結",
+                data=summary_content.encode("utf-8"),
+                file_name=summary_file.name,
+                mime="text/markdown",
+                use_container_width=True,
+                key=f"download_history_summary_{session.id}_{idx}"
+            )
+
+
+def _render_admin_summary_generator(session: Session) -> None:
+    """Render admin-only summary generation controls."""
+    st.markdown("---")
+    st.markdown("#### 🤖 生成 AI 課程總結")
 
     transcription_dir = _session_transcription_dir(session)
 
     if not is_admin_authenticated():
-        st.info("請登入管理員帳號以使用 AI 總結功能")
+        st.info("請登入管理員帳號以使用 AI 總結生成功能")
         return
 
     st.caption("使用 GPT-5-mini 將最新的逐字稿潤飾為結構化的課程總結")
@@ -667,34 +711,6 @@ def _render_admin_summary_controls(session: Session) -> None:
                 )
         else:
             st.error(f"❌ {result['message']}")
-
-    # Display existing summaries
-    if transcription_dir.exists():
-        summary_files = sorted(
-            transcription_dir.glob("summary-*.md"),
-            key=lambda p: p.stat().st_mtime,
-            reverse=True
-        )
-
-        if summary_files:
-            st.markdown("##### 📚 歷史總結")
-
-            for idx, summary_file in enumerate(summary_files[:3], 1):
-                modified_time = datetime.fromtimestamp(summary_file.stat().st_mtime)
-                time_str = modified_time.strftime("%Y-%m-%d %H:%M:%S")
-
-                with st.expander(f"{summary_file.name} · {time_str}", expanded=False):
-                    summary_content = summary_file.read_text(encoding="utf-8")
-                    st.markdown(summary_content)
-
-                    st.download_button(
-                        "📥 下載此總結",
-                        data=summary_content.encode("utf-8"),
-                        file_name=summary_file.name,
-                        mime="text/markdown",
-                        use_container_width=True,
-                        key=f"download_history_summary_{session.id}_{idx}"
-                    )
 
 
 def render_session_detail(session_id: str):
@@ -827,7 +843,11 @@ def render_session_detail(session_id: str):
             key_prefix=f"session_{session.id}",
         )
 
-        _render_admin_summary_controls(session)
+        # Render summary history for all users (below transcript history)
+        _render_summary_history(session)
+
+        # Render admin-only summary generator
+        _render_admin_summary_generator(session)
 
     with side_col:
         st.markdown(_detail_speaker_html(session), unsafe_allow_html=True)
@@ -869,6 +889,96 @@ def render_session_detail(session_id: str):
             )
         except Exception:
             pass
+
+        # Quick download section for latest transcript and summary
+        from src.services.transcript_summarization_service import get_latest_transcript
+        from datetime import datetime
+
+        # Get latest transcript
+        latest_transcript = get_latest_transcript(transcription_dir)
+
+        # Get latest summary
+        latest_summary = None
+        if transcription_dir.exists():
+            summary_files = sorted(
+                transcription_dir.glob("summary-*.md"),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True
+            )
+            if summary_files:
+                latest_summary = summary_files[0]
+
+
+        # Two columns for download buttons
+        download_col1, download_col2 = st.columns(2, gap="small")
+
+        with download_col1:
+            if latest_transcript:
+                try:
+                    transcript_content = latest_transcript.read_text(encoding="utf-8")
+                    file_time = datetime.fromtimestamp(latest_transcript.stat().st_mtime)
+                    time_str = file_time.strftime("%m-%d %H:%M")
+
+                    st.download_button(
+                        label="📄 最新逐字稿",
+                        data=transcript_content.encode("utf-8"),
+                        file_name=latest_transcript.name,
+                        mime="text/plain",
+                        use_container_width=True,
+                        key=f"download_latest_transcript_{session.id}",
+                        help=f"更新時間：{time_str}"
+                    )
+                except Exception:
+                    st.button(
+                        "📄 最新逐字稿",
+                        disabled=True,
+                        use_container_width=True,
+                        key=f"download_latest_transcript_disabled_{session.id}",
+                        help="檔案無法讀取"
+                    )
+            else:
+                st.button(
+                    "📄 最新逐字稿",
+                    disabled=True,
+                    use_container_width=True,
+                    key=f"download_latest_transcript_none_{session.id}",
+                    help="尚無逐字稿"
+                )
+
+        with download_col2:
+            if latest_summary:
+                try:
+                    summary_content = latest_summary.read_text(encoding="utf-8")
+                    file_time = datetime.fromtimestamp(latest_summary.stat().st_mtime)
+                    time_str = file_time.strftime("%m-%d %H:%M")
+
+                    st.download_button(
+                        label="📝 最新課程總結",
+                        data=summary_content.encode("utf-8"),
+                        file_name=latest_summary.name,
+                        mime="text/markdown",
+                        use_container_width=True,
+                        key=f"download_latest_summary_{session.id}",
+                        help=f"更新時間：{time_str}"
+                    )
+                except Exception:
+                    st.button(
+                        "📝 最新課程總結",
+                        disabled=True,
+                        use_container_width=True,
+                        key=f"download_latest_summary_disabled_{session.id}",
+                        help="檔案無法讀取"
+                    )
+            else:
+                st.button(
+                    "📝 最新課程總結",
+                    disabled=True,
+                    use_container_width=True,
+                    key=f"download_latest_summary_none_{session.id}",
+                    help="尚無總結"
+                )
+
+        st.markdown("</div>", unsafe_allow_html=True)
 
         status = session.status()
 
