@@ -611,6 +611,11 @@ def _render_admin_summary_controls(session: Session) -> None:
 
     st.info(f"📄 最新逐字稿：`{latest_transcript.name}`")
 
+    # Initialize session state for summary results
+    summary_state_key = f"summary_result_{session.id}"
+    if summary_state_key not in st.session_state:
+        st.session_state[summary_state_key] = None
+
     col1, col2 = st.columns([3, 1])
 
     with col1:
@@ -628,28 +633,40 @@ def _render_admin_summary_controls(session: Session) -> None:
                     session_learning_outcomes=session.learning_outcomes
                 )
 
-                if success:
-                    st.success(f"✅ {message}")
-
-                    if summary_path and summary_path.exists():
-                        summary_content = summary_path.read_text(encoding="utf-8")
-
-                        with st.expander("📖 查看總結內容", expanded=True):
-                            st.markdown(summary_content)
-
-                        st.download_button(
-                            "📥 下載總結 (Markdown)",
-                            data=summary_content.encode("utf-8"),
-                            file_name=summary_path.name,
-                            mime="text/markdown",
-                            use_container_width=True,
-                            key=f"download_summary_{session.id}"
-                        )
-                else:
-                    st.error(f"❌ {message}")
+                # Store result in session state
+                st.session_state[summary_state_key] = {
+                    "success": success,
+                    "message": message,
+                    "summary_path": summary_path
+                }
 
     with col2:
         st.caption("模型：GPT-5-mini")
+
+    # Display results from session state (outside button handler)
+    if st.session_state[summary_state_key] is not None:
+        result = st.session_state[summary_state_key]
+
+        if result["success"]:
+            st.success(f"✅ {result['message']}")
+
+            summary_path = result["summary_path"]
+            if summary_path and summary_path.exists():
+                summary_content = summary_path.read_text(encoding="utf-8")
+
+                with st.expander("📖 查看總結內容", expanded=True):
+                    st.markdown(summary_content)
+
+                st.download_button(
+                    "📥 下載總結 (Markdown)",
+                    data=summary_content.encode("utf-8"),
+                    file_name=summary_path.name,
+                    mime="text/markdown",
+                    use_container_width=True,
+                    key=f"download_summary_{session.id}"
+                )
+        else:
+            st.error(f"❌ {result['message']}")
 
     # Display existing summaries
     if transcription_dir.exists():

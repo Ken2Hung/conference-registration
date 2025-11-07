@@ -4,12 +4,16 @@ Conference Session Management System
 """
 import logging
 import streamlit as st
+from dotenv import load_dotenv
 
 from src.ui.dashboard import render_dashboard
 from src.ui.session_detail import render_session_detail
 from src.ui.admin_panel import render_admin_panel
 from src.ui.transcription_page import render_transcription_page
 from src.ui.mic_recorder_page import render_mic_recorder_page
+
+# Load environment variables from .env file
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
