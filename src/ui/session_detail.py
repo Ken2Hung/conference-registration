@@ -373,6 +373,44 @@ def _detail_header_html(session: Session) -> str:
     )
 
 
+def _detail_intro_photo_html(session: Session) -> str:
+    """Return intro photo block HTML if photo exists."""
+    if not session.intro_photo:
+        return ""
+    
+    photo_path = session.intro_photo
+    
+    if photo_path.startswith(("http://", "https://")):
+        img_src = photo_path
+    elif photo_path.startswith("data:"):
+        img_src = photo_path
+    else:
+        photo_path = photo_path.replace("\\", "/")
+        file_path = Path(photo_path)
+        if not file_path.exists():
+            alternatives = [
+                Path(f"resource/session_intro_pic/{file_path.name}"),
+            ]
+            for alt_path in alternatives:
+                if alt_path.exists():
+                    file_path = alt_path
+                    break
+        
+        img_src = _get_image_base64(str(file_path))
+    
+    if not img_src:
+        return ""
+    
+    return html_block(
+        f"""
+        <div class="detail-section" style="padding: 12px; overflow: hidden; background: rgba(0, 0, 0, 0.2);">
+            <img src="{img_src}" alt="{session.title}" 
+                 style="width: 100%; height: auto; object-fit: contain; border-radius: 12px; display: block;" />
+        </div>
+        """
+    )
+
+
 def _detail_description_html(session: Session) -> str:
     """Return description block HTML."""
     visible_tags = session.tags[:3]
@@ -757,6 +795,9 @@ def render_session_detail(session_id: str):
     main_col, side_col = st.columns([1.6, 1], gap="large")
 
     with main_col:
+        intro_photo_html = _detail_intro_photo_html(session)
+        if intro_photo_html:
+            st.markdown(intro_photo_html, unsafe_allow_html=True)
         st.markdown(_detail_description_html(session), unsafe_allow_html=True)
         st.markdown(_detail_learning_html(session), unsafe_allow_html=True)
         st.markdown(_detail_registrants_html(session), unsafe_allow_html=True)
