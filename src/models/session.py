@@ -24,6 +24,7 @@ class Session:
     speaker: Speaker
     registrants: List['Registrant'] = field(default_factory=list)
     registration_start_date: Optional[str] = None
+    intro_photo: Optional[str] = None
 
     def __post_init__(self):
         """Validate session data after initialization."""

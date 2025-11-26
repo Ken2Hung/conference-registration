@@ -27,6 +27,7 @@ from src.ui.html_utils import html_block
 logger = logging.getLogger(__name__)
 
 SPEAKER_PHOTO_DIR = Path("resource/speaker-photo")
+SESSION_INTRO_PHOTO_DIR = Path("resource/session_intro_pic")
 ALLOWED_PHOTO_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif"}
 
 
@@ -81,6 +82,40 @@ def _save_speaker_photo(uploaded_file: object, speaker_name: str) -> str:
         raise ValueError(f"無法儲存講者照片：{error}") from error
 
     return str(file_path)
+
+
+def _save_session_intro_photo(uploaded_file: object, session_title: str) -> str:
+    """Persist uploaded session intro photo and return relative path."""
+    if uploaded_file is None:
+        raise ValueError("請上傳課程照片")
+
+    suffix = Path(uploaded_file.name).suffix.lower()
+    if suffix not in ALLOWED_PHOTO_EXTENSIONS:
+        raise ValueError("不支援的圖片格式，請上傳 png/jpg/jpeg/gif 檔案")
+
+    SESSION_INTRO_PHOTO_DIR.mkdir(parents=True, exist_ok=True)
+
+    filename = f"{_sanitize_filename(session_title)}_{int(datetime.now().timestamp())}{suffix}"
+    file_path = SESSION_INTRO_PHOTO_DIR / filename
+
+    try:
+        file_path.write_bytes(uploaded_file.getbuffer())
+    except Exception as error:
+        raise ValueError(f"無法儲存課程照片：{error}") from error
+
+    return str(file_path)
+
+
+def _get_existing_session_intro_photos() -> list[Path]:
+    """Get list of existing session intro photos in the photo directory."""
+    if not SESSION_INTRO_PHOTO_DIR.exists():
+        return []
+    
+    photos = []
+    for ext in ALLOWED_PHOTO_EXTENSIONS:
+        photos.extend(SESSION_INTRO_PHOTO_DIR.glob(f"*{ext}"))
+    
+    return sorted(photos, key=lambda p: p.stat().st_mtime, reverse=True)
 
 
 def _get_existing_speaker_photos() -> list[Path]:
@@ -171,6 +206,92 @@ def _render_speaker_photo_selector(
             with col2:
                 st.success(f"✓ 已上傳：{uploaded.name}")
         
+        return "upload", uploaded
+
+
+def _render_session_intro_photo_selector(
+    prefix: str,
+    current_photo: str = None,
+    session_title: str = ""
+) -> tuple[str, object]:
+    """
+    Render session intro photo selection UI (optional field).
+    
+    Args:
+        prefix: Unique prefix for widget keys
+        current_photo: Current photo path (optional)
+        session_title: Session title for generating filename
+        
+    Returns:
+        Tuple of (photo_mode, photo_path_or_upload)
+        - photo_mode: "none", "existing" or "upload"
+        - photo_path_or_upload: None, Path string if existing, UploadedFile if upload
+    """
+    existing_photos = _get_existing_session_intro_photos()
+    
+    st.markdown("#### 🖼️ 課程簡介照片（選填）")
+    
+    if current_photo:
+        st.caption(f"目前照片：`{current_photo}`")
+    
+    photo_options = ["不使用照片", "從現有圖片選擇", "上傳新圖片"]
+    default_index = 0
+    if current_photo:
+        default_index = 1
+    
+    photo_mode = st.radio(
+        "選擇照片方式",
+        options=photo_options,
+        key=f"{prefix}_intro_photo_mode",
+        horizontal=True,
+        index=default_index,
+    )
+    
+    selected_dropdown = None
+    uploaded = None
+    
+    if existing_photos:
+        photo_options_map = {str(p): p.name for p in existing_photos}
+        selected_dropdown = st.selectbox(
+            "選擇現有照片（若選擇「從現有圖片選擇」模式）",
+            options=list(photo_options_map.keys()),
+            format_func=lambda x: photo_options_map[x],
+            key=f"{prefix}_intro_photo_dropdown",
+        )
+        
+        if selected_dropdown:
+            col1, col2 = st.columns([1, 2])
+            with col1:
+                try:
+                    st.image(selected_dropdown, caption="現有照片預覽", width='stretch')
+                except Exception:
+                    st.error("無法載入預覽")
+            with col2:
+                st.caption(f"檔案：{photo_options_map[selected_dropdown]}")
+    elif photo_mode == "從現有圖片選擇":
+        st.warning("⚠️ 目前沒有可用的課程照片，請選擇上傳新圖片或不使用照片")
+    
+    uploaded = st.file_uploader(
+        "上傳新課程照片（若選擇「上傳新圖片」模式）",
+        type=["png", "jpg", "jpeg", "gif"],
+        key=f"{prefix}_intro_photo_upload",
+        help="支援 PNG、JPG、JPEG、GIF 格式，建議檔案大小 < 10MB",
+    )
+    
+    if uploaded:
+        col1, col2 = st.columns([1, 2])
+        with col1:
+            st.image(uploaded, caption="新上傳照片預覽", width='stretch')
+        with col2:
+            st.success(f"✓ 已上傳：{uploaded.name}")
+    
+    if photo_mode == "不使用照片":
+        return "none", None
+    elif photo_mode == "從現有圖片選擇":
+        if not existing_photos:
+            return "none", None
+        return "existing", selected_dropdown
+    else:
         return "upload", uploaded
 
 
@@ -502,6 +623,12 @@ def render_create_session_form():
         tags = st.text_input("標籤*", placeholder="用逗號分隔，例：Python,Web Scraping")
         learning_outcomes = st.text_area("學習成果*", placeholder="學員將學到什麼...")
 
+        intro_photo_mode, intro_photo_data = _render_session_intro_photo_selector(
+            prefix="create_session",
+            current_photo=None,
+            session_title=title
+        )
+
         st.markdown("#### 講者資訊")
         speaker_name = st.text_input("講者姓名*")
         
@@ -571,6 +698,18 @@ def render_create_session_form():
                     st.error(f"❌ 上傳失敗：{error}")
                     return
 
+            intro_photo_path = None
+            if intro_photo_mode == "existing":
+                intro_photo_path = intro_photo_data
+            elif intro_photo_mode == "upload" and intro_photo_data is not None:
+                try:
+                    intro_photo_path = _save_session_intro_photo(
+                        intro_photo_data, title.strip() or "session"
+                    )
+                except ValueError as error:
+                    st.error(f"❌ 課程照片上傳失敗：{error}")
+                    return
+
             session_payload = {
                 "title": title.strip(),
                 "description": description.strip(),
@@ -587,6 +726,7 @@ def render_create_session_form():
                     "bio": speaker_bio.strip(),
                 },
                 "registration_start_date": registration_start_date_str,
+                "intro_photo": intro_photo_path,
             }
 
             try:
@@ -718,6 +858,12 @@ def render_edit_session_form():
         tags = st.text_input("標籤*", value=tags_default)
         learning_outcomes = st.text_area("學習成果*", value=session.learning_outcomes)
 
+        intro_photo_mode, intro_photo_data = _render_session_intro_photo_selector(
+            prefix=f"edit_session_{session_id}",
+            current_photo=session.intro_photo,
+            session_title=title
+        )
+
         st.markdown("#### 講者資訊")
         speaker_name = st.text_input("講者姓名*", value=session.speaker.name)
         
@@ -781,6 +927,20 @@ def render_edit_session_form():
                         st.error(f"❌ 上傳失敗：{error}")
                         return
 
+            intro_photo_path = session.intro_photo
+            if intro_photo_mode == "none":
+                intro_photo_path = None
+            elif intro_photo_mode == "existing":
+                intro_photo_path = intro_photo_data
+            elif intro_photo_mode == "upload" and intro_photo_data is not None:
+                try:
+                    intro_photo_path = _save_session_intro_photo(
+                        intro_photo_data, title.strip() or "session"
+                    )
+                except ValueError as error:
+                    st.error(f"❌ 課程照片上傳失敗：{error}")
+                    return
+
             updates = {
                 "title": title.strip(),
                 "description": description.strip(),
@@ -797,6 +957,7 @@ def render_edit_session_form():
                     "bio": speaker_bio.strip(),
                 },
                 "registration_start_date": registration_start_date_str,
+                "intro_photo": intro_photo_path,
             }
 
             try:
