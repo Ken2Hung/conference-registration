@@ -224,25 +224,43 @@ def _render_session_intro_photo_selector(
         
     Returns:
         Tuple of (photo_mode, photo_path_or_upload)
-        - photo_mode: "none", "existing" or "upload"
-        - photo_path_or_upload: None, Path string if existing, UploadedFile if upload
+        - photo_mode: "keep", "none", "existing" or "upload"
+        - photo_path_or_upload: current path, None, Path string if existing, UploadedFile if upload
     """
     existing_photos = _get_existing_session_intro_photos()
     
     st.markdown("#### 🖼️ 課程簡介照片（選填）")
     
     if current_photo:
-        st.caption(f"目前照片：`{current_photo}`")
+        photo_path = Path(current_photo.replace("\\", "/"))
+        st.caption(f"目前照片：`{photo_path.name}`")
+        col1, col2 = st.columns([1, 3])
+        with col1:
+            try:
+                if photo_path.exists():
+                    st.image(str(photo_path), caption="目前照片", width=150)
+            except Exception:
+                pass
     
-    photo_options = ["不使用照片", "從現有圖片選擇", "上傳新圖片"]
-    default_index = 0
     if current_photo:
-        default_index = 1
+        photo_options = ["保留目前照片", "不使用照片", "從現有圖片選擇", "上傳新圖片"]
+        default_index = 0
+    else:
+        photo_options = ["不使用照片", "從現有圖片選擇", "上傳新圖片"]
+        default_index = 0
+    
+    radio_key = f"{prefix}_intro_photo_mode"
+    if radio_key in st.session_state:
+        stored_value = st.session_state[radio_key]
+        if stored_value in photo_options:
+            default_index = photo_options.index(stored_value)
+        else:
+            default_index = 0
     
     photo_mode = st.radio(
         "選擇照片方式",
         options=photo_options,
-        key=f"{prefix}_intro_photo_mode",
+        key=radio_key,
         horizontal=True,
         index=default_index,
     )
@@ -252,22 +270,41 @@ def _render_session_intro_photo_selector(
     
     if existing_photos:
         photo_options_map = {str(p): p.name for p in existing_photos}
+        options_list = list(photo_options_map.keys())
+        
+        dropdown_key = f"{prefix}_intro_photo_dropdown"
+        
+        default_select_index = 0
+        if current_photo:
+            current_photo_normalized = current_photo.replace("\\", "/")
+            for i, opt in enumerate(options_list):
+                if opt.replace("\\", "/") == current_photo_normalized or Path(opt).name == Path(current_photo_normalized).name:
+                    default_select_index = i
+                    break
+        
+        if dropdown_key in st.session_state:
+            stored_selection = st.session_state[dropdown_key]
+            if stored_selection in options_list:
+                default_select_index = options_list.index(stored_selection)
+        
         selected_dropdown = st.selectbox(
             "選擇現有照片（若選擇「從現有圖片選擇」模式）",
-            options=list(photo_options_map.keys()),
+            options=options_list,
             format_func=lambda x: photo_options_map[x],
-            key=f"{prefix}_intro_photo_dropdown",
+            key=dropdown_key,
+            index=default_select_index,
         )
         
-        if selected_dropdown:
+        if selected_dropdown and photo_mode == "從現有圖片選擇":
             col1, col2 = st.columns([1, 2])
             with col1:
                 try:
-                    st.image(selected_dropdown, caption="現有照片預覽", width='stretch')
+                    st.image(selected_dropdown, caption="選擇的照片預覽", width='stretch')
                 except Exception:
                     st.error("無法載入預覽")
             with col2:
                 st.caption(f"檔案：{photo_options_map[selected_dropdown]}")
+                st.info(f"路徑：{selected_dropdown}")
     elif photo_mode == "從現有圖片選擇":
         st.warning("⚠️ 目前沒有可用的課程照片，請選擇上傳新圖片或不使用照片")
     
@@ -278,14 +315,16 @@ def _render_session_intro_photo_selector(
         help="支援 PNG、JPG、JPEG、GIF 格式，建議檔案大小 < 10MB",
     )
     
-    if uploaded:
+    if uploaded and photo_mode == "上傳新圖片":
         col1, col2 = st.columns([1, 2])
         with col1:
             st.image(uploaded, caption="新上傳照片預覽", width='stretch')
         with col2:
             st.success(f"✓ 已上傳：{uploaded.name}")
     
-    if photo_mode == "不使用照片":
+    if photo_mode == "保留目前照片":
+        return "keep", current_photo
+    elif photo_mode == "不使用照片":
         return "none", None
     elif photo_mode == "從現有圖片選擇":
         if not existing_photos:
@@ -562,6 +601,11 @@ def render_create_session_form():
     if st.session_state.pop("admin_scroll_target", None) == "create":
         _scroll_to("admin-create-session-anchor")
 
+    if "create_form_id" not in st.session_state:
+        st.session_state.create_form_id = int(datetime.now().timestamp())
+    
+    form_id = st.session_state.create_form_id
+
     st.markdown("---")
     st.markdown("### ➕ 新增議程")
 
@@ -624,7 +668,7 @@ def render_create_session_form():
         learning_outcomes = st.text_area("學習成果*", placeholder="學員將學到什麼...")
 
         intro_photo_mode, intro_photo_data = _render_session_intro_photo_selector(
-            prefix="create_session",
+            prefix=f"create_session_{form_id}",
             current_photo=None,
             session_title=title
         )
@@ -634,7 +678,7 @@ def render_create_session_form():
         
         # Use new photo selector
         photo_mode, photo_data = _render_speaker_photo_selector(
-            prefix="create_session",
+            prefix=f"create_session_{form_id}",
             current_photo=None,
             speaker_name=speaker_name
         )
@@ -741,9 +785,13 @@ def render_create_session_form():
                     f"✅ 議程已建立（ID: {new_session_id}）",
                 )
                 st.session_state.admin_action = None
+                if "create_form_id" in st.session_state:
+                    del st.session_state.create_form_id
 
         if cancel:
             del st.session_state.admin_action
+            if "create_form_id" in st.session_state:
+                del st.session_state.create_form_id
 
 
 def render_edit_session_form():
@@ -928,18 +976,26 @@ def render_edit_session_form():
                         return
 
             intro_photo_path = session.intro_photo
-            if intro_photo_mode == "none":
+            if intro_photo_mode == "keep":
+                intro_photo_path = session.intro_photo
+            elif intro_photo_mode == "none":
                 intro_photo_path = None
             elif intro_photo_mode == "existing":
-                intro_photo_path = intro_photo_data
-            elif intro_photo_mode == "upload" and intro_photo_data is not None:
-                try:
-                    intro_photo_path = _save_session_intro_photo(
-                        intro_photo_data, title.strip() or "session"
-                    )
-                except ValueError as error:
-                    st.error(f"❌ 課程照片上傳失敗：{error}")
-                    return
+                if intro_photo_data:
+                    intro_photo_path = intro_photo_data
+                else:
+                    intro_photo_path = session.intro_photo
+            elif intro_photo_mode == "upload":
+                if intro_photo_data is not None:
+                    try:
+                        intro_photo_path = _save_session_intro_photo(
+                            intro_photo_data, title.strip() or "session"
+                        )
+                    except ValueError as error:
+                        st.error(f"❌ 課程照片上傳失敗：{error}")
+                        return
+                else:
+                    intro_photo_path = session.intro_photo
 
             updates = {
                 "title": title.strip(),
