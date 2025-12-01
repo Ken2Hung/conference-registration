@@ -50,7 +50,7 @@
       "id": "session_003",
       "registered": 20,
       "title": "AI cli model實作 -- 第一課",
-      "description": "生成式 AI 逐步融入開發流程的時代，如何以「命令列模式（CLI mode）」整合 AI coding agent，將決定團隊在 AI 助力開發中的生產力與穩定性。\n本課程實作三大主流 AI 開發 CLI 工具──OpenAI Codex CLI、Anthropic Claude Code CLI、Google Gemini CLI，從安裝設定、資源修改、到最佳實踐策略，完整掌握「AI 程式碼協作者」的操作核心。\n\n透過實際操作與範例導引，你將學會如何讓 AI 在你的開發環境中發揮最大效益，並建立安全、可控且高效率的「人機協作開發流程（Agentic Coding Workflow）」。\n\n1.[Workshop]安裝 Codex、Claude Code、Gemini CLI\n\t* 認識各 CLI 的差異與相容性\n\t* 安全性與 API Key 管理實務\n\t* AI Resource 的修改與維護\n2. 如何在 CLI 模式下調整 AI 模型資源（模型版本、溝通上下文、工具調用）\n\t* 設定開發上下文、記憶檔（如 AGENTS.md、GEMINI.md）\n\t* 跨專案共享與版本控管\n3. CLI Mode開發\n\t* Codex、Claude Code、Gemini CLI的相關功能\n\t* SDD開發思路\n4. 三大 CLI 工具的最佳實踐比較與操作演示\n\n📚 參考資料（References）\n\n* [Claude Code: Best Practices for Agentic Coding – Anthropic Engineering Blog](https://www.anthropic.com/engineering/claude-code-best-practices)\n* [Best Practices for Coding with OpenAI Codex – Collaborne Engineering, Medium](https://medium.com/collaborne-engineering/best-practices-for-coding-with-openai-codex-6907ba6f7596)\n* [Mastering the Gemini CLI – Creative AI Ninja, Medium](https://medium.com/@creativeaininja/mastering-the-gemini-cli-cb6f1cb7d6eb)",
+      "description": "生成式 AI 逐步融入開發流程的時代，如何以「命令列模式（CLI mode）」整合 AI coding agent，將決定團隊在 AI 助力開發中的生產力與穩定性。\n本課程實作三大主流 AI 開發 CLI 工具──OpenAI Codex CLI、Anthropic Claude Code CLI、Google Gemini CLI，從安裝設定、資源修改、到最佳實踐策略，完整掌握「AI 程式碼協作者」的操作核心。\n\n透過實際操作與範例導引，你將學會如何讓 AI 在你的開發環境中發揮最大效益，並建立安全、可控且高效率的「人機協作開發流程（Agentic Coding Workflow）」。\n\n\n1.[Workshop]安裝 Codex、Claude Code、Gemini CLI\n\t* 認識各 CLI 的差異與相容性\n\t* AI Resource 的修改\n2. 如何在 CLI 模式下調整 AI 模型資源（模型版本、溝通上下文、工具調用）\n\t* 設定開發上下文、記憶檔（如 CLAUDE.md、GEMINI.md）\n\t* 跨專案開發\n3. CLI Mode開發\n\t* Copilot CLI、Claude Code、Gemini CLI的相關功能\n\t* SDD如何在CLI使用\n4. 三大 CLI 工具的最佳實踐比較與操作演示\n\n📚 參考資料（References）\n* 上課文檔:   [AI cli model實作](https://hackmd.io/@XuJU3FwJTIa6ZFRSomsbDg/BJd6pEPk-g)\n* [Claude Code: Best Practices for Agentic Coding – Anthropic Engineering Blog](https://www.anthropic.com/engineering/claude-code-best-practices)\n* [Best Practices for Coding with OpenAI Codex – Collaborne Engineering, Medium](https://medium.com/collaborne-engineering/best-practices-for-coding-with-openai-codex-6907ba6f7596)\n* [Mastering the Gemini CLI – Creative AI Ninja, Medium](https://medium.com/@creativeaininja/mastering-the-gemini-cli-cb6f1cb7d6eb)",
       "date": "2025-11-06",
       "time": "16:00-18:00",
       "location": "立功 A12",
@@ -148,14 +148,15 @@
           "name": "Donna_Li",
           "registered_at": "2025-11-04T16:23:45.189767+08:00"
         }
-      ]
+      ],
+      "registration_start_date": null
     },
     {
       "id": "session_004",
       "registered": 1,
       "title": "Agent Framework實作",
       "description": "隨著 AI 模型從「對話助手」邁向「可行動代理（Agent）」的新階段，開發者不再只撰寫 prompt，而是需要設計一套能自主決策、執行任務、串接多工具的 Agent Framework。\n本課程將以實作為導向，介紹 Agent 的核心概念、運作流程與框架組成，並帶領學員親手打造能與外部 API、資料庫、CLI 工具互動的智能代理。\n\n學員將學習如何在 Python 環境中構建一個具備「思考、行動、回饋」能力的 Agent，掌握從任務分解、工具選擇到記憶管理的完整開發流程。",
-      "date": "2025-12-25",
+      "date": "TBD",
       "time": "TBD",
       "location": "TBD",
       "level": "中",
@@ -177,14 +178,15 @@
           "registered_at": "2025-11-05T14:26:11.789656+08:00"
         }
       ],
-      "registration_start_date": "2025-12-12"
+      "registration_start_date": "2026-05-30",
+      "intro_photo": null
     },
     {
       "id": "session_005",
       "registered": 1,
       "title": "SDD驅動開發實作",
       "description": "在 AI-輔助開發與自動化工程日益成熟的時代，「Spec-Driven Development（SDD）」正逐漸成為開發新典範。\n以 GitHub Spec-Kit 為核心，學習如何讓「規格（Spec）」不只是文件，而是驅動設計、開發、測試與協作的源頭。\n\n透過實際操作與範例，示範如何建立一個從 specify plan → specify implement → specify review 的完整流程，讓每一份 spec 能夠自動生成程式架構、追蹤需求變更、並串接 AI 工具（如 Claude Code、Gemini CLI）進行快速實作。\n\n特別強調「文件即程式碼」的概念，幫助開發者在版本控制中維持高可追溯性與一致性，達到規格與實作同步演進（Spec ⇆ Code parity） 的目標。",
-      "date": "2025-12-26",
+      "date": "TBD",
       "time": "TBD",
       "location": "TBD",
       "level": "中",
@@ -204,7 +206,131 @@
           "registered_at": "2025-11-05T14:25:52.715620+08:00"
         }
       ],
-      "registration_start_date": "2025-12-12"
+      "registration_start_date": "2026-03-21",
+      "intro_photo": null
+    },
+    {
+      "id": "session_006",
+      "registered": 19,
+      "title": "按下指令後就去喝咖啡 :AI 協作的自動化",
+      "description": "在軟體開發流程中，需求驗證、錯誤復現與測試腳本撰寫往往佔據大量時間與心力——而這些過程，其實都能交給自動化與 AI 共同完成。本課程將示範如何把「人工重複操作」化作「一鍵執行、然後去喝咖啡」，讓工程師把時間專注在更高價值的決策與創造。\n\n## 📌 課程內容亮點\n\n### **1. Playwright 在需求驗證中的自動化應用**\n### **2. Playwright 如何自動進行 Exception 復現**\n### **3. 語言模型可視化後的自動化方案（以 Anthropic Opus 4.5 為例）**",
+      "date": "2025-12-01",
+      "time": "11:00-11:30",
+      "location": "5A04",
+      "level": "初",
+      "tags": [
+        "Playwright",
+        "CLI"
+      ],
+      "learning_outcomes": "✅ 建立以 Playwright 驗證需求的自動化工作方式\n✅ 讓 Exception 復現不再依賴人工回溯\n✅ 將語言模型的推論轉成可執行的自動化流程",
+      "capacity": 30,
+      "speaker": {
+        "name": "Ken2_Hung(洪健儀)",
+        "photo": "resource\\speaker-photo\\ken2_hung_1762230105.jpg",
+        "bio": "洪健儀，2處1部AP1-3課，資深全端工程師，擅長JAVA, Python, SQL、AI Agent 開發相關技術"
+      },
+      "registration_start_date": "2025-11-26",
+      "intro_photo": "resource\\session_intro_pic\\ai_1764133190.png",
+      "registrants": [
+        {
+          "name": "Chris_Peng",
+          "registered_at": "2025-11-26T12:28:01.484369+08:00"
+        },
+        {
+          "name": "JohnnyKC_Li",
+          "registered_at": "2025-11-26T12:41:10.512488+08:00"
+        },
+        {
+          "name": "Jackson_Huang",
+          "registered_at": "2025-11-26T13:33:51.625207+08:00"
+        },
+        {
+          "name": "Sharon_Chang",
+          "registered_at": "2025-11-26T13:35:59.994224+08:00"
+        },
+        {
+          "name": "Shannon",
+          "registered_at": "2025-11-26T13:42:46.293312+08:00"
+        },
+        {
+          "name": "許嘉允",
+          "registered_at": "2025-11-26T13:43:05.032381+08:00"
+        },
+        {
+          "name": "Claire_Jiang",
+          "registered_at": "2025-11-26T13:43:54.410791+08:00"
+        },
+        {
+          "name": "Yushan_Huang",
+          "registered_at": "2025-11-26T13:48:34.567362+08:00"
+        },
+        {
+          "name": "George_Shih",
+          "registered_at": "2025-11-26T14:04:11.690814+08:00"
+        },
+        {
+          "name": "Ivy",
+          "registered_at": "2025-11-26T14:11:50.344795+08:00"
+        },
+        {
+          "name": "Yizen_Lai",
+          "registered_at": "2025-11-26T16:56:22.414879+08:00"
+        },
+        {
+          "name": "YH",
+          "registered_at": "2025-11-27T14:20:50.950502+08:00"
+        },
+        {
+          "name": "Yuhui_Lin",
+          "registered_at": "2025-11-27T14:21:18.129027+08:00"
+        },
+        {
+          "name": "Donna_Li",
+          "registered_at": "2025-11-28T16:45:53.805698+08:00"
+        },
+        {
+          "name": "Darla",
+          "registered_at": "2025-11-28T16:48:05.887772+08:00"
+        },
+        {
+          "name": "David",
+          "registered_at": "2025-12-01T09:32:35.420582+08:00"
+        },
+        {
+          "name": "BenYJ",
+          "registered_at": "2025-12-01T09:34:05.030439+08:00"
+        },
+        {
+          "name": "zack",
+          "registered_at": "2025-12-01T09:39:34.171505+08:00"
+        },
+        {
+          "name": "Kevin_Yang",
+          "registered_at": "2025-12-01T09:45:29.790579+08:00"
+        }
+      ]
+    },
+    {
+      "id": "session_007",
+      "registered": 0,
+      "title": "下班早點走！Gemini 3.0 的職場實用密技",
+      "description": "1. 暖身：Gemini 3.0 厲害在哪？ (5 分鐘)\n簡單聊聊它變聰明的地方。\n為什麼現在是使用的好時機？\n\n2. 簡報救星：一鍵生成架構與講稿 (15 分鐘)\n不只給大綱：如何讓 Gemini 直接產出每一頁的詳細內文。\n演講不詞窮：根據投影片內容，自動幫你寫好「講稿」與開場白。\n實作示範：從一個模糊的想法，變成一份完整的簡報草稿。\n\n3. 超級眼力：影片內容秒讀懂 (15 分鐘)\n多模態 (Multimodality) 體驗：它看得懂圖片，更看得懂影片。\n影片懶人包：不用看完一小時的影片，丟給它直接問重點。\n跨格式理解\n\n4. 開發神助攻：前端架構輕鬆搭 (20 分鐘)\n代碼生成：描述需求，讓它直接寫出專案的目錄結構與基礎程式碼。",
+      "date": "2025-12-04",
+      "time": "17:00-18:00",
+      "location": "TBD",
+      "level": "初",
+      "tags": [
+        "GEMINI"
+      ],
+      "learning_outcomes": "⚡ 秒出簡報的能力\n👁️ 影片快讀的技巧",
+      "capacity": 20,
+      "speaker": {
+        "name": "Ken2_Hung(洪健儀)",
+        "photo": "resource\\speaker-photo\\ken2_hung_1762230105.jpg",
+        "bio": "洪健儀，2處1部AP1-3課，資深全端工程師，擅長JAVA, Python, SQL、AI Agent 開發相關技術"
+      },
+      "registration_start_date": "2025-11-28",
+      "intro_photo": "resource\\session_intro_pic\\gemini_3_0_1764123487.png"
     }
   ]
 }
